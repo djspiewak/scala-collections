@@ -1,0 +1,4 @@
+#!/bin/sh
+
+buildr compile
+exec java -Xmx1024m -Xms256m -server -cp "${SCALA_HOME}/lib/scala-library.jar:target/classes" VectorPerfTest
