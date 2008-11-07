@@ -181,19 +181,29 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
     val mask = 1 << i
     
     if ((bits & mask) == mask) {
-      val newTable = new Array[Node[K, V]](32)
-      Array.copy(table, 0, newTable, 0, 32)
+      val node = table(i).remove(key, hash)
       
-      val node = newTable(i).remove(key, hash)
-      val newBits = if (node.isInstanceOf[EmptyNode[_]]) {
-        newTable(i) = null
-        bits ^ mask
+      if (node.isInstanceOf[EmptyNode[_]]) {
+        val adjustedBits = bits ^ mask
+        val log = Math.log(adjustedBits) / Math.log(2)
+        
+        if (log.toInt.toDouble == log) {      // last one
+          table(log.toInt)
+        } else {
+          val newTable = new Array[Node[K, V]](32)
+          Array.copy(table, 0, newTable, 0, 32)
+          
+          newTable(i) = null
+          
+          new BitmappedNode(shift)(newTable, adjustedBits)
+        }
       } else {
+        val newTable = new Array[Node[K, V]](32)
+        Array.copy(table, 0, newTable, 0, 32)
+        
         newTable(i) = node
-        bits
+        new BitmappedNode(shift)(newTable, bits)
       }
-      
-      new BitmappedNode(shift)(newTable, newBits)
     } else this
   }
   
