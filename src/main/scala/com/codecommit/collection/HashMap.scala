@@ -7,6 +7,10 @@ class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   
   def get(key: K) = root(key, key.hashCode)
   
+  override def +[A >: V](pair: (K, A)) = pair match {
+    case (k, v) => update(k, v)
+  }
+  
   def update[A >: V](key: K, value: A) = new HashMap(root(key, key.hashCode) = value)
   
   def -(key: K) = new HashMap(root.remove(key, key.hashCode))
@@ -40,7 +44,7 @@ private[collection] sealed trait Node[K, +V] {
 private[collection] class EmptyNode[K] extends Node[K, Nothing] {
   def apply(key: K, hash: Int) = None
   
-  def update[V](key: K, hash: Int, value: V) = new LeafNode(key, value)
+  def update[V](key: K, hash: Int, value: V) = new LeafNode(key, hash, value)
   
   def remove(key: K, hash: Int) = this
   
@@ -53,16 +57,16 @@ private[collection] class EmptyNode[K] extends Node[K, Nothing] {
   val size = 0
 }
 
-private[collection] class LeafNode[K, +V](key: K, value: V) extends Node[K, V] {
+private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends Node[K, V] {
   def apply(key: K, hash: Int) = if (this.key == key) Some(value) else None
   
   def update[A >: V](key: K, hash: Int, value: A) = {
     if (this.key == key) {
-      new LeafNode(key, value)
-    } else if (this.key.hashCode == key.hashCode) {
-      new CollisionNode(this.key -> this.value, key -> value)
+      new LeafNode(key, hash, value)
+    } else if (this.hash == hash || hash == 0) {      // if we're bottoming out, just collide
+      new CollisionNode((this.key, this.hash, this.value), (key, hash, value))
     } else {
-      BitmappedNode(this.key -> this.value, key -> value)
+      BitmappedNode((this.key, this.hash, this.value), (key, hash, value))
     }
   }
   
@@ -80,43 +84,43 @@ private[collection] class LeafNode[K, +V](key: K, value: V) extends Node[K, V] {
   val size = 1
 }
 
-private[collection] class CollisionNode[K, +V](bucket: List[(K, V)]) extends Node[K, V] {
+private[collection] class CollisionNode[K, +V](bucket: List[(K, Int, V)]) extends Node[K, V] {
   
-  def this(pairs: (K, V)*) = this(pairs.toList)
+  def this(pairs: (K, Int, V)*) = this(pairs.toList)
   
   def apply(key: K, hash: Int) = for {
-    (k, v) <- bucket find { case (k, _) => k == key }
+    (_, _, v) <- bucket find { case (k, _, _) => k == key }
   } yield v
   
   def update[A >: V](key: K, hash: Int, value: A) = {
     var found = false
     
     val newBucket = for {
-      (k, v) <- bucket
+      (k, h, v) <- bucket
     } yield {
       if (k == key) {
         found = true
-        (key, value)
-      } else (k, v)
+        (key, hash, value)
+      } else (k, h, v)
     }
     
-    new CollisionNode(if (found) newBucket else (key, value) :: bucket)
+    new CollisionNode(if (found) newBucket else (key, hash, value) :: bucket)
   }
   
   def remove(key: K, hash: Int) = {
-    if (bucket.exists({ case (k, v) => k == key }) && size == 2) {
-      var pair: (K, V) = null
+    if (bucket.exists({ case (k,_, _) => k == key }) && size == 2) {
+      var pair: (K, Int, V) = null
       
       for {
-        (k, v) <- bucket
+        (k, h, v) <- bucket
         if k == key
-      } pair = (k, v)
+      } pair = (k, h, v)
       
-      new LeafNode(pair._1, pair._2)
-    } else new CollisionNode(bucket.dropWhile({ case (k, v) => k == key }))
+      new LeafNode(pair._1, pair._2, pair._3)
+    } else new CollisionNode(bucket.dropWhile({ case (k, _, _) => k == key }))
   }
   
-  def elements = bucket.elements
+  def elements = (bucket map { case (k, _, v) => (k, v) }).elements
   
   lazy val size = bucket.length
 }
@@ -187,11 +191,11 @@ private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: I
 }
 
 private[collection] object BitmappedNode {
-  def apply[K, V](pairs: (K, V)*) = {
+  def apply[K, V](pairs: (K, Int, V)*) = {
     val table = new Array[Node[K, V]](32)
     val bits = pairs.foldLeft(0) { (bits, pair) =>
-      val (key, value) = pair
-      addToTable(table, bits)(key, key.hashCode, value)
+      val (key, hash, value) = pair
+      addToTable(table, bits)(key, hash, value)
     }
     
     new BitmappedNode(table, bits, pairs.length)
@@ -207,7 +211,7 @@ private[collection] object BitmappedNode {
       bits
     } else {
       val newBits = bits | mask
-      table(i) = new LeafNode(key, value)
+      table(i) = new LeafNode(key, hash, value)
       
       newBits
     }
