@@ -20,6 +20,8 @@ class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   def elements = root.elements
   
   def empty[A]: HashMap[K, A] = new HashMap(new EmptyNode[K])
+  
+  def diagnose = root.toString
 }
 
 object HashMap {
@@ -123,16 +125,12 @@ private[collection] class CollisionNode[K, +V](shift: Int, hash: Int, bucket: Li
   }
   
   def remove(key: K, hash: Int) = {
-    if (bucket.exists({ case (k, _) => k == key }) && size == 2) {
-      var pair: (K, V) = null
-      
-      for {
-        (k, v) <- bucket
-        if k == key
-      } pair = (k, v)
-      
-      new LeafNode(shift, hash)(pair._1, pair._2)
-    } else new CollisionNode(shift, hash, bucket.dropWhile({ case (k, _) => k == key }))
+    val newBucket = bucket filter { case (k, _) => k != key }
+    
+    if (newBucket.length == 1) {
+      val (key, value) = newBucket.head
+      new LeafNode(shift, hash)(key, value)
+    } else new CollisionNode(shift, hash, newBucket)
   }
   
   def elements = (bucket map { case (k, v) => (k, v) }).elements
@@ -186,6 +184,7 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
       if (node.isInstanceOf[EmptyNode[_]]) {
         val adjustedBits = bits ^ mask
         val log = Math.log(adjustedBits) / Math.log(2)
+        println(log)
         
         if (log.toInt.toDouble == log) {      // last one
           table(log.toInt)

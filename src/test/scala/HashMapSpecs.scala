@@ -51,7 +51,7 @@ object HashMapSpecs extends Specification with Scalacheck {
     "remove ints" in {
       val prop = property { map: HashMap[Int, String] =>
         map.size > 0 ==> {
-          val (rm, _) = map.elements.next
+          val (rm, _) = map.elements.next     // insufficient
           val newMap = map - rm
           
           !newMap.contains(rm) && 
