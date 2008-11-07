@@ -47,6 +47,20 @@ object HashMapSpecs extends Specification with Scalacheck {
       
       prop must pass
     }
+    
+    "remove ints" in {
+      val prop = property { (map: HashMap[Int, String], rm: Int) =>
+        map.contains(rm) ==> {
+          val newMap = map - rm
+          
+          !newMap.contains(rm) && 
+            (newMap forall { case (k, v) => map(k) == v }) && 
+            newMap.size == map.size - 1
+        }
+      }
+      
+      prop must pass
+    }
   }
   
   implicit def arbHashMap[K](implicit ak: Arbitrary[List[K]]): Arbitrary[HashMap[K, String]] = {
