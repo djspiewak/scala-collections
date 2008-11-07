@@ -11,6 +11,8 @@ class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   
   def -(key: K) = new HashMap(root.remove(key, key.hashCode))
   
+  def elements = root.elements
+  
   def empty[A]: HashMap[K, A] = new HashMap(new EmptyNode[K])
   
   lazy val size = root.size
@@ -30,6 +32,8 @@ private[collection] sealed trait Node[K, +V] {
   
   def remove(key: K, hash: Int): Node[K, V]
   
+  def elements: Iterator[(K, V)]
+  
   val size: Int
 }
 
@@ -39,6 +43,12 @@ private[collection] class EmptyNode[K] extends Node[K, Nothing] {
   def update[V](key: K, hash: Int, value: V) = new LeafNode(key, value)
   
   def remove(key: K, hash: Int) = this
+  
+  lazy val elements = new Iterator[(K, Nothing)] {
+    val hasNext = false
+    
+    val next = null
+  }
   
   val size = 0
 }
@@ -57,6 +67,15 @@ private[collection] class LeafNode[K, +V](key: K, value: V) extends Node[K, V] {
   }
   
   def remove(key: K, hash: Int) = if (this.key == key) new EmptyNode[K] else this
+  
+  def elements = new Iterator[(K, V)] {
+    var hasNext = true
+    
+    def next = {
+      hasNext = false
+      (key, value)
+    }
+  }
   
   val size = 1
 }
@@ -96,6 +115,8 @@ private[collection] class CollisionNode[K, +V](bucket: List[(K, V)]) extends Nod
       new LeafNode(pair._1, pair._2)
     } else new CollisionNode(bucket.dropWhile({ case (k, v) => k == key }))
   }
+  
+  def elements = bucket.elements
   
   lazy val size = bucket.length
 }
@@ -148,6 +169,20 @@ private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: I
       
       new BitmappedNode(newTable, newBits, newSize)
     } else this
+  }
+  
+  def elements = {
+    val iters = table flatMap { n => 
+      if (n == null) Array[Iterator[(K, V)]]() else Array(n.elements)
+    }
+    
+    iters.foldLeft(emptyElements) { _ ++ _ }
+  }
+  
+  private lazy val emptyElements: Iterator[(K, V)] = new Iterator[(K, V)] {
+    val hasNext = false
+    
+    val next = null
   }
 }
 
@@ -213,5 +248,10 @@ private[collection] class FullNode[K, +V](table: Array[Node[K, V]], val size: In
       newTable(i) = node
       new FullNode(newTable, newSize)
     }
+  }
+  
+  def elements = {
+    val iters = table map { _.elements }
+    iters.reduceLeft[Iterator[(K, V)]] { _ ++ _ }
   }
 }
