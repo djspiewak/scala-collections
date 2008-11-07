@@ -32,6 +32,8 @@ object HashMap {
 // nodes
 
 private[collection] sealed trait Node[K, +V] {
+  val size: Int
+  
   def apply(key: K, hash: Int): Option[V]
   
   def update[A >: V](key: K, hash: Int, value: A): Node[K, A]
@@ -39,14 +41,15 @@ private[collection] sealed trait Node[K, +V] {
   def remove(key: K, hash: Int): Node[K, V]
   
   def elements: Iterator[(K, V)]
-  
-  val size: Int
 }
 
+
 private[collection] class EmptyNode[K] extends Node[K, Nothing] {
+  val size = 0
+  
   def apply(key: K, hash: Int) = None
   
-  def update[V](key: K, hash: Int, value: V) = new LeafNode(key, hash, value)
+  def update[V](key: K, hash: Int, value: V) = new LeafNode(0, hash)(key, value)
   
   def remove(key: K, hash: Int) = this
   
@@ -55,11 +58,10 @@ private[collection] class EmptyNode[K] extends Node[K, Nothing] {
     
     val next = null
   }
-  
-  val size = 0
 }
 
-private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends Node[K, V] {
+
+private[collection] class LeafNode[K, +V](shift: Int, hash: Int)(key: K, value: V) extends Node[K, V] {
   def apply(key: K, hash: Int) = {
     printf("find(%s): %s%n", key, this)
     
@@ -68,11 +70,11 @@ private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends N
   
   def update[A >: V](key: K, hash: Int, value: A) = {
     if (this.key == key) {
-      new LeafNode(key, hash, value)
+      new LeafNode(shift, hash)(key, value)
     } else if (this.hash == hash || hash == 0) {      // if we're bottoming out, just collide
-      new CollisionNode((this.key, this.hash, this.value), (key, hash, value))
+      new CollisionNode(shift, hash, this.key -> this.value, key -> value)
     } else {
-      BitmappedNode((this.key, this.hash, this.value), (key, hash, value))
+      BitmappedNode(shift + 5)(Array((this.key, this.hash, this.value), (key, hash, value)))
     }
   }
   
@@ -92,66 +94,73 @@ private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends N
   override def toString = "LeafNode(" + key + " -> " + value + ")"
 }
 
-private[collection] class CollisionNode[K, +V](bucket: List[(K, Int, V)]) extends Node[K, V] {
+
+private[collection] class CollisionNode[K, +V](shift: Int, hash: Int, bucket: List[(K, V)]) extends Node[K, V] {
   println("Detected collision: " + bucket)
   
-  def this(pairs: (K, Int, V)*) = this(pairs.toList)
+  def this(shift: Int, hash: Int, pairs: (K, V)*) = this(shift, hash, pairs.toList)
   
   def apply(key: K, hash: Int) = {
     printf("find(%s): %s%n", key, this)
     
     for {
-      (_, _, v) <- bucket find { case (k, _, _) => k == key }
+      (_, v) <- bucket find { case (k, _) => k == key }
     } yield v
   }
   
-  def update[A >: V](key: K, hash: Int, value: A) = {
-    var found = false
-    
-    val newBucket = for {
-      (k, h, v) <- bucket
-    } yield {
-      if (k == key) {
-        found = true
-        (key, hash, value)
-      } else (k, h, v)
+  def update[A >: V](key: K, hash: Int, value: A): Node[K, A] = {
+    if (this.hash == hash) {
+      var found = false
+      
+      val newBucket = for {
+        (k, v) <- bucket
+      } yield {
+        if (k == key) {
+          found = true
+          (key, value)
+        } else (k, v)
+      }
+      
+      new CollisionNode(shift, hash, if (found) newBucket else (key, value) :: bucket)
+    } else {
+      val tempBucket = ((key, value) :: bucket).map({ case (k, v) => (k, k.hashCode, v) })
+      BitmappedNode(shift)(tempBucket.toArray)   // not the most efficient, bit not too bad
     }
-    
-    new CollisionNode(if (found) newBucket else (key, hash, value) :: bucket)
   }
   
   def remove(key: K, hash: Int) = {
-    if (bucket.exists({ case (k,_, _) => k == key }) && size == 2) {
-      var pair: (K, Int, V) = null
+    if (bucket.exists({ case (k, _) => k == key }) && size == 2) {
+      var pair: (K, V) = null
       
       for {
-        (k, h, v) <- bucket
+        (k, v) <- bucket
         if k == key
-      } pair = (k, h, v)
+      } pair = (k, v)
       
-      new LeafNode(pair._1, pair._2, pair._3)
-    } else new CollisionNode(bucket.dropWhile({ case (k, _, _) => k == key }))
+      new LeafNode(shift, hash)(pair._1, pair._2)
+    } else new CollisionNode(shift, hash, bucket.dropWhile({ case (k, _) => k == key }))
   }
   
-  def elements = (bucket map { case (k, _, v) => (k, v) }).elements
+  def elements = (bucket map { case (k, v) => (k, v) }).elements
   
   lazy val size = bucket.length
   
   override def toString = "CollisionNode(" + bucket.toString + ")"
 }
 
-private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: Int, val size: Int) extends Node[K, V] {
+
+private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, V]], bits: Int, val size: Int) extends Node[K, V] {
   import BitmappedNode._
   
   def apply(key: K, hash: Int) = {
     printf("find(%s): %s%n", key, this)
     
-    val i = hash & 0x01f
+    val i = (hash >>> shift) & 0x01f
     val mask = 1 << i
     
     if ((bits & mask) == mask) {
       println("Looking recursive")
-      table(i)(key, hash >>> 5)
+      table(i)(key, hash)
     } else {
       println("Failed with mask " + mask)
       None
@@ -159,31 +168,31 @@ private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: I
   }
   
   def update[A >: V](key: K, hash: Int, value: A): Node[K, A] = {
-    val i = hash & 0x01f
+    val i = (hash >>> shift) & 0x01f
     val mask = 1 << i
     
     val newTable = new Array[Node[K, A]](32)
     Array.copy(table, 0, newTable, 0, 32)
     
-    val newBits = addToTable(newTable, bits)(key, hash, value)
+    val newBits = addToTable(shift)(newTable, bits)(key, hash, value)
     val newSize = if (newBits == bits) size else size + 1
     
     if (newBits == Math.MIN_INT) {
-      new FullNode(newTable, newSize)
+      new FullNode(shift)(newTable, newSize)
     } else {
-      new BitmappedNode(newTable, newBits, newSize)
+      new BitmappedNode(shift)(newTable, newBits, newSize)
     }
   }
   
   def remove(key: K, hash: Int) = {
-    val i = hash & 0x01f
+    val i = (hash >>> shift) & 0x01f
     val mask = 1 << i
     
     if ((bits & mask) == mask) {
       val newTable = new Array[Node[K, V]](32)
       Array.copy(table, 0, newTable, 0, 32)
       
-      val node = newTable(i).remove(key, hash >>> 5)
+      val node = newTable(i).remove(key, hash)
       val newSize = size - (newTable(i).size - node.size)
       
       val newBits = if (node.isInstanceOf[EmptyNode[_]]) {
@@ -194,7 +203,7 @@ private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: I
         bits
       }
       
-      new BitmappedNode(newTable, newBits, newSize)
+      new BitmappedNode(shift)(newTable, newBits, newSize)
     } else this
   }
   
@@ -215,52 +224,57 @@ private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: I
   }
 }
 
+
 private[collection] object BitmappedNode {
-  def apply[K, V](pairs: (K, Int, V)*) = {
+  def apply[K, V](shift: Int)(pairs: Array[(K, Int, V)]) = {
     val table = new Array[Node[K, V]](32)
     val bits = pairs.foldLeft(0) { (bits, pair) =>
       val (key, hash, value) = pair
-      addToTable(table, bits)(key, hash, value)
+      addToTable(shift)(table, bits)(key, hash, value)
     }
     
-    new BitmappedNode(table, bits, pairs.length)
+    new BitmappedNode(shift)(table, bits, pairs.length)
   }
   
-  private def addToTable[K, V](table: Array[Node[K, V]], bits: Int)(key: K, hash: Int, value: V) = {
-    val i = hash & 0x01f
+  private def addToTable[K, V](shift: Int)(table: Array[Node[K, V]], bits: Int)(key: K, hash: Int, value: V) = {
+    val i = (hash >>> shift) & 0x01f
     val mask = 1 << i
     
     if ((bits & mask) == mask) {
-      table(i) = (table(i)(key, hash >>> 5) = value)
+      table(i) = (table(i)(key, hash) = value)
     } else {
-      table(i) = new LeafNode(key, hash, value)
+      table(i) = new LeafNode(shift, hash)(key, value)
     }
     
     bits | mask
   }
 }
 
-private[collection] class FullNode[K, +V](table: Array[Node[K, V]], val size: Int) extends Node[K, V] {
+
+private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]], val size: Int) extends Node[K, V] {
   def apply(key: K, hash: Int) = {
     printf("find(%s): %s%n", key, this)
     
-    val i = hash & 0x01f
+    val i = (hash >>> shift) & 0x01f
     
-    table(i)(key, hash >>> 5)
+    table(i)(key, hash)
   }
   
   def update[A >: V](key: K, hash: Int, value: A) = {
-    val i = hash & 0x01f
+    val i = (hash >>> shift) & 0x01f
     
     val newTable = new Array[Node[K, A]](32)
     Array.copy(table, 0, newTable, 0, 32)
     
-    newTable(i) = newTable(i)(key, hash >>> 5) = value
-    new FullNode(newTable, size)
+    val node = newTable(i)(key, hash) = value
+    val newSize = size + (node.size - newTable(i).size)
+    newTable(i) = node
+    
+    new FullNode(shift)(newTable, newSize)
   }
   
   def remove(key: K, hash: Int) = {
-    val i = hash & 0x01f
+    val i = (hash >>> shift) & 0x01f
     val mask = 1 << i
     
     val newTable = new Array[Node[K, V]](32)
@@ -271,10 +285,10 @@ private[collection] class FullNode[K, +V](table: Array[Node[K, V]], val size: In
     
     if (node.isInstanceOf[EmptyNode[_]]) {
       newTable(i) = null
-      new BitmappedNode(newTable, Math.MAX_INT ^ mask, newSize)
+      new BitmappedNode(shift)(newTable, Math.MAX_INT ^ mask, newSize)
     } else {
       newTable(i) = node
-      new FullNode(newTable, newSize)
+      new FullNode(shift)(newTable, newSize)
     }
   }
   
