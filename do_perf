@@ -3,4 +3,4 @@
 buildr test:compile
 
 echo ===============================================================================
-exec java -Xmx1024m -Xms256m -server -cp "${SCALA_HOME}/lib/scala-library.jar:target/test/classes" VectorPerf
+exec java -Xmx2048m -Xms512m -server -cp "${SCALA_HOME}/lib/scala-library.jar:target/classes:target/test/classes" VectorPerf
