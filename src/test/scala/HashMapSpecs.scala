@@ -49,8 +49,24 @@ object HashMapSpecs extends Specification with Scalacheck {
     }
     
     "remove ints" in {
-      val prop = property { (map: HashMap[Int, String], rm: Int) =>
-        map.contains(rm) ==> {
+      val prop = property { map: HashMap[Int, String] =>
+        map.size > 0 ==> {
+          val (rm, _) = map.elements.next
+          val newMap = map - rm
+          
+          !newMap.contains(rm) && 
+            (newMap forall { case (k, v) => map(k) == v }) && 
+            newMap.size == map.size - 1
+        }
+      }
+      
+      prop must pass
+    }
+    
+    "remove strings" in {
+      val prop = property { map: HashMap[String, String] =>
+        map.size > 0 ==> {
+          val (rm, _) = map.elements.next
           val newMap = map - rm
           
           !newMap.contains(rm) && 
