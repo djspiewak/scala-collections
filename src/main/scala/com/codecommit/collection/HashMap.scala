@@ -2,7 +2,14 @@ package com.codecommit.collection
 
 import HashMap._
 
-class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
+/**
+ * A clean-room port of Rich Hickey's persistent hash trie implementation from
+ * Clojure (http://clojure.org).  Originally presented as a mutable structure in
+ * a paper by Phil Bagwell.
+ * 
+ * @author Daniel Spiewak
+ */
+final class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   lazy val size = root.size
   
   def this() = this(new EmptyNode[K])
