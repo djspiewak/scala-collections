@@ -1,7 +1,5 @@
 package com.codecommit.collection
 
-import HashMap._
-
 /**
  * A clean-room port of Rich Hickey's persistent hash trie implementation from
  * Clojure (http://clojure.org).  Originally presented as a mutable structure in
