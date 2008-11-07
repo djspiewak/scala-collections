@@ -25,13 +25,19 @@ object HashMapSpecs extends Specification with Scalacheck {
       prop must pass
     }
     
-    
+    "preserve values across changes" in {
+      val prop = property { (map: HashMap[String, String], ls: List[String], f: (String)=>String) =>
+        val newMap = ls.filter(!map.contains(_)).foldLeft(map) { (m, k) => m(k) = f(k) }
+        (map forall { case (k, v) => newMap(k) == v }) && (ls forall { v => newMap(v) == f(v) })
+      }
+      
+      prop must pass
+    }
   }
   
-  /* implicit def arbHashMap[K, V](implicit ak: Arbitrary[List[K]], implicit av: Arbitrary[(K)=>V]): Arbitrary[HashMap[K, V]] = {
+  implicit def arbHashMap[K](implicit ak: Arbitrary[List[K]]): Arbitrary[HashMap[K, String]] = {
     Arbitrary(for {
       keys <- ak.arbitrary
-      f <- av.arbitrary
-    } yield keys.foldLeft(new HashMap[K, V]) { (m, k) => m(k) = f(k) })
-  } */
+    } yield keys.foldLeft(new HashMap[K, String]) { (m, k) => m(k) = k.toString })
+  }
 }
