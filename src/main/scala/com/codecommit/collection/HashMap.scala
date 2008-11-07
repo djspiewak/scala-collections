@@ -62,6 +62,8 @@ private[collection] class EmptyNode[K] extends Node[K, Nothing] {
 
 
 private[collection] class LeafNode[K, +V](shift: Int, hash: Int)(key: K, value: V) extends Node[K, V] {
+  val size = 1
+  
   def apply(key: K, hash: Int) = if (this.key == key) Some(value) else None
   
   def update[A >: V](key: K, hash: Int, value: A) = {
@@ -85,13 +87,13 @@ private[collection] class LeafNode[K, +V](shift: Int, hash: Int)(key: K, value: 
     }
   }
   
-  val size = 1
-  
   override def toString = "LeafNode(" + key + " -> " + value + ")"
 }
 
 
 private[collection] class CollisionNode[K, +V](shift: Int, hash: Int, bucket: List[(K, V)]) extends Node[K, V] {
+  lazy val size = bucket.length
+  
   def this(shift: Int, hash: Int, pairs: (K, V)*) = this(shift, hash, pairs.toList)
   
   def apply(key: K, hash: Int) = {
@@ -135,14 +137,21 @@ private[collection] class CollisionNode[K, +V](shift: Int, hash: Int, bucket: Li
   
   def elements = (bucket map { case (k, v) => (k, v) }).elements
   
-  lazy val size = bucket.length
-  
   override def toString = "CollisionNode(" + bucket.toString + ")"
 }
 
 
-private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, V]], bits: Int, val size: Int) extends Node[K, V] {
+private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, V]], bits: Int) extends Node[K, V] {
   import BitmappedNode._
+  
+  lazy val size = {
+    val sizes = for {
+      n <- table
+      if n != null
+    } yield n.size
+    
+    sizes.foldLeft(0) { _ + _ }
+  }
   
   def apply(key: K, hash: Int) = {
     val i = (hash >>> shift) & 0x01f
@@ -159,12 +168,11 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
     Array.copy(table, 0, newTable, 0, 32)
     
     val newBits = addToTable(shift)(newTable, bits)(key, hash, value)
-    val newSize = if (newBits == bits) size else size + 1
     
     if (newBits == Math.MIN_INT) {
-      new FullNode(shift)(newTable, newSize)
+      new FullNode(shift)(newTable)
     } else {
-      new BitmappedNode(shift)(newTable, newBits, newSize)
+      new BitmappedNode(shift)(newTable, newBits)
     }
   }
   
@@ -177,8 +185,6 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
       Array.copy(table, 0, newTable, 0, 32)
       
       val node = newTable(i).remove(key, hash)
-      val newSize = size - (newTable(i).size - node.size)
-      
       val newBits = if (node.isInstanceOf[EmptyNode[_]]) {
         newTable(i) = null
         bits ^ mask
@@ -187,7 +193,7 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
         bits
       }
       
-      new BitmappedNode(shift)(newTable, newBits, newSize)
+      new BitmappedNode(shift)(newTable, newBits)
     } else this
   }
   
@@ -217,7 +223,7 @@ private[collection] object BitmappedNode {
       addToTable(shift)(table, bits)(key, hash, value)
     }
     
-    new BitmappedNode(shift)(table, bits, pairs.length)
+    new BitmappedNode(shift)(table, bits)
   }
   
   private def addToTable[K, V](shift: Int)(table: Array[Node[K, V]], bits: Int)(key: K, hash: Int, value: V) = {
@@ -235,7 +241,9 @@ private[collection] object BitmappedNode {
 }
 
 
-private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]], val size: Int) extends Node[K, V] {
+private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]]) extends Node[K, V] {
+  lazy val size = table.foldLeft(0) { _ + _.size }
+  
   def apply(key: K, hash: Int) = {
     val i = (hash >>> shift) & 0x01f
     
@@ -248,11 +256,9 @@ private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]], 
     val newTable = new Array[Node[K, A]](32)
     Array.copy(table, 0, newTable, 0, 32)
     
-    val node = newTable(i)(key, hash) = value
-    val newSize = size + (node.size - newTable(i).size)
-    newTable(i) = node
+    newTable(i) = newTable(i)(key, hash) = value
     
-    new FullNode(shift)(newTable, newSize)
+    new FullNode(shift)(newTable)
   }
   
   def remove(key: K, hash: Int) = {
@@ -263,14 +269,13 @@ private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]], 
     Array.copy(table, 0, newTable, 0, 32)
     
     val node = newTable(i).remove(key, hash)
-    val newSize = size - (newTable(i).size - node.size)
     
     if (node.isInstanceOf[EmptyNode[_]]) {
       newTable(i) = null
-      new BitmappedNode(shift)(newTable, Math.MAX_INT ^ mask, newSize)
+      new BitmappedNode(shift)(newTable, Math.MAX_INT ^ mask)
     } else {
       newTable(i) = node
-      new FullNode(shift)(newTable, newSize)
+      new FullNode(shift)(newTable)
     }
   }
   
