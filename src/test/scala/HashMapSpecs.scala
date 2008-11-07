@@ -27,8 +27,13 @@ object HashMapSpecs extends Specification with Scalacheck {
     
     "preserve values across changes" in {
       val prop = property { (map: HashMap[String, String], ls: List[String], f: (String)=>String) =>
-        val newMap = ls.filter(!map.contains(_)).foldLeft(map) { (m, k) => m(k) = f(k) }
-        (map forall { case (k, v) => newMap(k) == v }) && (ls forall { v => newMap(v) == f(v) })
+        val filtered = ls filter { !map.contains(_) }
+        
+        filtered.length > 0 ==> {
+          val newMap = filtered.foldLeft(map) { (m, k) => m(k) = f(k) }
+          
+          (map forall { case (k, v) => newMap(k) == v }) && (filtered forall { v => newMap(v) == f(v) })
+        }
       }
       
       prop must pass
