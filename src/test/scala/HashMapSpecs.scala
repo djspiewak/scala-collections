@@ -38,11 +38,26 @@ object HashMapSpecs extends Specification with Scalacheck {
       
       prop must pass
     }
+    
+    "calculate size" in {
+      val prop = property { (ls: Set[Int], f: (Int)=>Int) =>
+        val map = ls.foldLeft(new HashMap[Int, Int]) { (m, v) => m(v) = f(v) }
+        map.size == ls.size
+      }
+      
+      prop must pass
+    }
   }
   
   implicit def arbHashMap[K](implicit ak: Arbitrary[List[K]]): Arbitrary[HashMap[K, String]] = {
     Arbitrary(for {
       keys <- ak.arbitrary
     } yield keys.foldLeft(new HashMap[K, String]) { (m, k) => m(k) = k.toString })
+  }
+  
+  implicit def arbSet[A](implicit arb: Arbitrary[List[A]]): Arbitrary[Set[A]] = {
+    Arbitrary(for {
+      ls <- arb.arbitrary
+    } yield ls.foldLeft(Set[A]()) { _ + _ })
   }
 }
