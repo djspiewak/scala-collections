@@ -184,7 +184,6 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
       if (node.isInstanceOf[EmptyNode[_]]) {
         val adjustedBits = bits ^ mask
         val log = Math.log(adjustedBits) / Math.log(2)
-        println(log)
         
         if (log.toInt.toDouble == log) {      // last one
           table(log.toInt)
