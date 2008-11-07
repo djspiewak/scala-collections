@@ -77,6 +77,14 @@ object HashMapSpecs extends Specification with Scalacheck {
       
       prop must pass
     }
+    
+    "define empty" in {
+      val prop = property { map: HashMap[String, String] =>
+        map.empty.size == 0
+      }
+      
+      prop must pass
+    }
   }
   
   implicit def arbHashMap[K](implicit ak: Arbitrary[List[K]]): Arbitrary[HashMap[K, String]] = {
