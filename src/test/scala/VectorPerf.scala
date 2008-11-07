@@ -2,7 +2,7 @@ import com.codecommit.collection.Vector
 
 import scala.collection.mutable.ArrayBuffer
 
-object VectorPerfTest {
+object VectorPerf {
   def main(args: Array[String]) {
     println()
     
