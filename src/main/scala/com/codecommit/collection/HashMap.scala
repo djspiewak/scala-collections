@@ -1,7 +1,5 @@
 package com.codecommit.collection
 
-import scala.collection.immutable.TreeMap
-
 import HashMap._
 
 class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
@@ -13,9 +11,9 @@ class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   
   def -(key: K) = new HashMap(root.remove(key, key.hashCode))
   
-  def empty = new HashMap(new EmptyNode[K])
+  def empty[A]: HashMap[K, A] = new HashMap(new EmptyNode[K])
   
-  def size = root.size
+  lazy val size = root.size
 }
 
 object HashMap {
@@ -32,13 +30,15 @@ private[collection] sealed trait Node[K, +V] {
   
   def remove(key: K, hash: Int): Node[K, V]
   
-  def size: Int
+  val size: Int
 }
 
 private[collection] class EmptyNode[K] extends Node[K, Nothing] {
   def apply(key: K, hash: Int) = None
   
-  def update[A >: V](key: K, hash: Int, value: A) = new LeafNode(key value)
+  def update[V](key: K, hash: Int, value: V) = new LeafNode(key, value)
+  
+  def remove(key: K, hash: Int) = this
   
   val size = 0
 }
@@ -61,27 +61,43 @@ private[collection] class LeafNode[K, +V](key: K, value: V) extends Node[K, V] {
   val size = 1
 }
 
-private[collection] class CollisionNode[K, +V](tree: TreeMap[K, V]) extends Node[K, V] {
+private[collection] class CollisionNode[K, +V](bucket: List[(K, V)]) extends Node[K, V] {
   
-  def this(pairs: (K, V)*) = this(TreeMap(pairs:_*))
+  def this(pairs: (K, V)*) = this(pairs.toList)
   
-  def apply(key: K, hash: Int) = tree.get(key)
+  def apply(key: K, hash: Int) = for {
+    (k, v) <- bucket find { case (k, _) => k == key }
+  } yield v
   
   def update[A >: V](key: K, hash: Int, value: A) = {
-    val newTree = tree(key) = value
-    new CollisionNode(newTree)
+    var found = false
+    
+    val newBucket = for {
+      (k, v) <- bucket
+    } yield {
+      if (k == key) {
+        found = true
+        (key, value)
+      } else (k, v)
+    }
+    
+    new CollisionNode(if (found) newBucket else (key, value) :: bucket)
   }
   
   def remove(key: K, hash: Int) = {
-    if (tree contains key && tree.size == 2) {
-      var pair: (K, V) = _
-      for ((k, v) <- tree; if k == key) pair = (k, v)
+    if (bucket.exists({ case (k, v) => k == key }) && size == 2) {
+      var pair: (K, V) = null
+      
+      for {
+        (k, v) <- bucket
+        if k == key
+      } pair = (k, v)
       
       new LeafNode(pair._1, pair._2)
-    } else new CollisionNode(tree - key)
+    } else new CollisionNode(bucket.dropWhile({ case (k, v) => k == key }))
   }
   
-  def size = tree.size
+  lazy val size = bucket.length
 }
 
 private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: Int, val size: Int) extends Node[K, V] {
@@ -94,7 +110,7 @@ private[collection] class BitmappedNode[K, +V](table: Array[Node[K, V]], bits: I
     if ((bits & mask) == mask) table(i)(key, hash >> 5) else None
   }
   
-  def update[A >: V](key: K, hash: Int, value: A) = {
+  def update[A >: V](key: K, hash: Int, value: A): Node[K, A] = {
     val i = hash & 0x01f
     val mask = 1 << i
     
@@ -140,7 +156,7 @@ private[collection] object BitmappedNode {
     val table = new Array[Node[K, V]](32)
     val bits = pairs.foldLeft(0) { (bits, pair) =>
       val (key, value) = pair
-      addToTable(table, bits)(key, key.hash, value)
+      addToTable(table, bits)(key, key.hashCode, value)
     }
     
     new BitmappedNode(table, bits, pairs.length)
@@ -184,13 +200,13 @@ private[collection] class FullNode[K, +V](table: Array[Node[K, V]], val size: In
     val i = hash & 0x01f
     val mask = 1 << i
     
-    val newTable = new Array[Node[K, A]](32)
+    val newTable = new Array[Node[K, V]](32)
     Array.copy(table, 0, newTable, 0, 32)
     
     val node = newTable(i).remove(key, hash)
     val newSize = size - (newTable(i).size - node.size)
     
-    if (node.isInstanceOf[EmptyNode]) {
+    if (node.isInstanceOf[EmptyNode[_]]) {
       newTable(i) = null
       new BitmappedNode(newTable, Math.MAX_INT ^ mask, newSize)
     } else {
