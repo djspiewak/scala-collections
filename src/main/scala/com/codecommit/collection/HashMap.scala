@@ -71,7 +71,7 @@ private[collection] class LeafNode[K, +V](shift: Int, hash: Int)(key: K, value: 
   def update[A >: V](key: K, hash: Int, value: A) = {
     if (this.key == key) {
       new LeafNode(shift, hash)(key, value)
-    } else if (this.hash == hash || hash == 0) {      // if we're bottoming out, just collide
+    } else if (this.hash == hash) {
       new CollisionNode(shift, hash, this.key -> this.value, key -> value)
     } else {
       BitmappedNode(shift)(Array((this.key, this.hash, this.value), (key, hash, value)))
