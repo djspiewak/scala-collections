@@ -261,11 +261,7 @@ private[collection] object BitmappedNode {
 private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]]) extends Node[K, V] {
   lazy val size = table.foldLeft(0) { _ + _.size }
   
-  def apply(key: K, hash: Int) = {
-    val i = (hash >>> shift) & 0x01f
-    
-    table(i)(key, hash)
-  }
+  def apply(key: K, hash: Int) = table((hash >>> shift) & 0x01f)(key, hash)
   
   def update[A >: V](key: K, hash: Int, value: A) = {
     val i = (hash >>> shift) & 0x01f
@@ -301,5 +297,5 @@ private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]]) 
     iters.reduceLeft[Iterator[(K, V)]] { _ ++ _ }
   }
   
-  override def toString = "FullNode"
+  override def toString = "FullNode(" + table.foldLeft("") { _.toString + ", " + _.toString } + ")"
 }
