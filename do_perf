@@ -2,5 +2,7 @@
 
 buildr test:compile
 
-echo ===============================================================================
-exec java -Xmx2048m -Xms512m -server -cp "${SCALA_HOME}/lib/scala-library.jar:target/classes:target/test/classes" VectorPerf
+if [$? -eq 0]; then
+  echo ===============================================================================
+  exec java -Xmx2048m -Xms512m -server -cp "${SCALA_HOME}/lib/scala-library.jar:target/classes:target/test/classes" VectorPerf
+fi
