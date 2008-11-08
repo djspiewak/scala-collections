@@ -20,7 +20,7 @@ object HashMapSpecs extends Specification with Scalacheck {
         src forall { v => map(v) == -v }
       }
       
-      prop must pass
+      prop must pass(set(maxSize -> 5000, minTestsOk -> 2000))
     }
     
     "store strings" in {
