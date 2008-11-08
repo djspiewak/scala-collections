@@ -7,6 +7,13 @@ object HashMapSpecs extends Specification with Scalacheck {
   import Prop._
   
   "it" should {
+    "not die" in {
+      val map = HashMap(-1 -> -1, 0 -> 0)
+      
+      map(-1) mustEqual -1
+      map(0) mustEqual 0
+    }
+    
     "store ints" in {
       val prop = property { src: List[Int] =>
         val map = src.foldLeft(new HashMap[Int, Int]) { (m, v) => m(v) = -v }

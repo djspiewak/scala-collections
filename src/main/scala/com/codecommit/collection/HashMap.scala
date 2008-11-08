@@ -167,12 +167,12 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
     val i = (hash >>> shift) & 0x01f
     val mask = 1 << i
     
-    val newTable = new Array[Node[K, A]](32)
-    Array.copy(table, 0, newTable, 0, 32)
+    val newTable = new Array[Node[K, A]](Math.max(table.length, i + 1))
+    Array.copy(table, 0, newTable, 0, table.length)
     
     val newBits = addToTable(shift)(newTable, bits)(key, hash, value)
     
-    if (newBits == Math.MIN_INT) {
+    if (newBits == ~0) {
       new FullNode(shift)(newTable)
     } else {
       new BitmappedNode(shift)(newTable, newBits)
@@ -193,16 +193,16 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
         if (log.toInt.toDouble == log) {      // last one
           table(log.toInt)
         } else {
-          val newTable = new Array[Node[K, V]](32)
-          Array.copy(table, 0, newTable, 0, 32)
+          val newTable = new Array[Node[K, V]](if (i + 1 == table.length) table.length - 1 else table.length)
+          Array.copy(table, 0, newTable, 0, newTable.length)
           
           newTable(i) = null
           
           new BitmappedNode(shift)(newTable, adjustedBits)
         }
       } else {
-        val newTable = new Array[Node[K, V]](32)
-        Array.copy(table, 0, newTable, 0, 32)
+        val newTable = new Array[Node[K, V]](table.length)
+        Array.copy(table, 0, newTable, 0, table.length)
         
         newTable(i) = node
         new BitmappedNode(shift)(newTable, bits)
@@ -230,7 +230,11 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
 
 private[collection] object BitmappedNode {
   def apply[K, V](shift: Int)(pairs: Array[(K, Int, V)]) = {
-    val table = new Array[Node[K, V]](32)
+    val table = new Array[Node[K, V]](pairs.foldLeft(0) { (x, pair) =>
+      val (_, hash, _) = pair
+      Math.max(x, (hash >>> shift) & 0x01f)
+    } + 1)
+    
     val bits = pairs.foldLeft(0) { (bits, pair) =>
       val (key, hash, value) = pair
       addToTable(shift)(table, bits)(key, hash, value)
