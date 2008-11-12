@@ -90,11 +90,11 @@ object PerfLib {
       val timeWidth:java.lang.Integer = widthTotal - 5
       val memWidth:java.lang.Integer = widthTotal - 7
       
-      val timeFormat = String.format(timeTemplate, Array(timeWidth))
-      val memoryFormat = String.format(memoryTemplate, Array(memWidth))
-      val diffFormat = String.format(String.format(diffTemplate, Array(width)), Array(diff, "ms"))
-      val memDiffFormat = String.format(String.format(diffTemplate, Array(width)), Array(memDiff, " KB"))
-      val percentFormat = String.format(String.format(percentTemplate, Array(width)), Array(percent))
+      val timeFormat = String.format(timeTemplate, timeWidth)
+      val memoryFormat = String.format(memoryTemplate, memWidth)
+      val diffFormat = String.format(String.format(diffTemplate, width), diff, "ms")
+      val memDiffFormat = String.format(String.format(diffTemplate, width), memDiff, " KB")
+      val percentFormat = String.format(String.format(percentTemplate, width), percent)
       
       div('-')
       

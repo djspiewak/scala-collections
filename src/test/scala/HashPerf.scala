@@ -1,5 +1,7 @@
 import com.codecommit.collection.HashMap
 
+import scala.collection.immutable.IntMap
+
 object HashPerf {
   import PerfLib._
   
@@ -42,7 +44,7 @@ object HashPerf {
       hashMapOp compare mapOp
       
       val intMapOp = "IntMap" -> time {
-        var map = test.IntMap[String]()
+        var map = IntMap[String]()
         var i = 0
         
         while (i < indexes.length) {
@@ -121,7 +123,7 @@ object HashPerf {
       
       hashMapOp compare mapOp
       
-      var intMap = test.IntMap[String]()
+      var intMap = IntMap[String]()
       
       {
         var i = 0

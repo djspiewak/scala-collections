@@ -1,6 +1,7 @@
 import com.codecommit.collection.Vector
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.immutable.IntMap
 
 object VectorPerf {
   import PerfLib._
@@ -35,7 +36,7 @@ object VectorPerf {
       vectorOp compare arrayOp
       
       val intMapOp = "IntMap" -> time {
-        var map = test.IntMap[Int]()
+        var map = IntMap[Int]()
         var i = 0
         
         while (i < 100000) {
@@ -81,7 +82,7 @@ object VectorPerf {
         bitVec += i
       }
       
-      var map = test.IntMap[Int]()
+      var map = IntMap[Int]()
       for (i <- 0 until 100000) {
         map = map(i) = i
       }
@@ -171,7 +172,7 @@ object VectorPerf {
         bitVec(indexes(i)) = i
       }
       
-      var map = test.IntMap[Int]()
+      var map = IntMap[Int]()
       for (i <- 0 until indexes.length) {
         map = map(indexes(i)) = i
       }
@@ -242,7 +243,7 @@ object VectorPerf {
         bitVec += i
       }
       
-      var map = test.IntMap[Int]()
+      var map = IntMap[Int]()
       for (i <- 0 until 100000) {
         map = map(i) = i
       }
@@ -280,7 +281,7 @@ object VectorPerf {
         bitVec += i
       }
       
-      var map = test.IntMap[Int]()
+      var map = IntMap[Int]()
       for (i <- 0 until 100000) {
         map = map(i) = i
       }
