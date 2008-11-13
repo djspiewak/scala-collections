@@ -40,6 +40,7 @@ package com.codecommit.collection
  * a paper by Phil Bagwell.
  * 
  * @author Daniel Spiewak
+ * @author Rich Hickey
  */
 final class HashTrie[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   lazy val size = root.size
