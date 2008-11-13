@@ -3,7 +3,7 @@ import org.scalacheck._
 
 import com.codecommit.collection.HashMap
 
-object HashMapSpecs extends Specification with Scalacheck {
+object HashMapSpecs extends Specification with ScalaCheck {
   import Prop._
   
   "it" should {

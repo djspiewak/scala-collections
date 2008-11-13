@@ -3,7 +3,7 @@ import org.scalacheck._
 
 import com.codecommit.collection.Vector
 
-object VectorSpecs extends Specification with Scalacheck {
+object VectorSpecs extends Specification with ScalaCheck {
   import Prop._
   
   val vector = Vector[Int]()

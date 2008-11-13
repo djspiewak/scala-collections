@@ -3,7 +3,7 @@ import org.scalacheck._
 
 import com.codecommit.collection.PathVector
 
-object PathVectorSpecs extends Specification with Scalacheck {
+object PathVectorSpecs extends Specification with ScalaCheck {
   import Prop._
   
   val vector = PathVector[Int]()

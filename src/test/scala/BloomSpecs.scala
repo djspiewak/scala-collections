@@ -4,7 +4,7 @@ import org.scalacheck._
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import com.codecommit.collection.BloomSet
 
-object BloomSpecs extends Specification with Scalacheck {
+object BloomSpecs extends Specification with ScalaCheck {
   import Prop._
   
   "bloom set" should {
