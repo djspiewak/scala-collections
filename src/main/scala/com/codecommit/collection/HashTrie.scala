@@ -7,7 +7,7 @@ package com.codecommit.collection
  * 
  * @author Daniel Spiewak
  */
-final class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
+final class HashTrie[K, +V] private (root: Node[K, V]) extends Map[K, V] {
   lazy val size = root.size
   
   def this() = this(new EmptyNode[K])
@@ -18,21 +18,21 @@ final class HashMap[K, +V] private (root: Node[K, V]) extends Map[K, V] {
     case (k, v) => update(k, v)
   }
   
-  def update[A >: V](key: K, value: A) = new HashMap(root(key, key.hashCode) = value)
+  def update[A >: V](key: K, value: A) = new HashTrie(root(key, key.hashCode) = value)
   
-  def -(key: K) = new HashMap(root.remove(key, key.hashCode))
+  def -(key: K) = new HashTrie(root.remove(key, key.hashCode))
   
   def elements = root.elements
   
-  def empty[A]: HashMap[K, A] = new HashMap(new EmptyNode[K])
+  def empty[A]: HashTrie[K, A] = new HashTrie(new EmptyNode[K])
   
   def diagnose = root.toString
 }
 
-object HashMap {
-  def apply[K, V](pairs: (K, V)*) = pairs.foldLeft(new HashMap[K, V]) { _ + _ }
+object HashTrie {
+  def apply[K, V](pairs: (K, V)*) = pairs.foldLeft(new HashTrie[K, V]) { _ + _ }
   
-  def unapply[K, V](map: HashMap[K, V]) = map.toSeq
+  def unapply[K, V](map: HashTrie[K, V]) = map.toSeq
 }
 
 // ============================================================================

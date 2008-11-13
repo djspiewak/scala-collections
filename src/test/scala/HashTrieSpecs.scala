@@ -1,15 +1,15 @@
 import org.specs._
 import org.scalacheck._
 
-import com.codecommit.collection.HashMap
+import com.codecommit.collection.HashTrie
 
-object HashMapSpecs extends Specification with ScalaCheck {
+object HashTrieSpecs extends Specification with ScalaCheck {
   import Prop._
   
   "it" should {
     "store ints" in {
       val prop = property { src: List[Int] =>
-        val map = src.foldLeft(new HashMap[Int, Int]) { (m, v) => m(v) = -v }
+        val map = src.foldLeft(new HashTrie[Int, Int]) { (m, v) => m(v) = -v }
         src forall { v => map(v) == -v }
       }
       
@@ -18,7 +18,7 @@ object HashMapSpecs extends Specification with ScalaCheck {
     
     "store strings" in {
       val prop = property { src: List[String] =>
-        val map = src.foldLeft(new HashMap[String, Int]) { (m, v) => m(v) = v.length }
+        val map = src.foldLeft(new HashTrie[String, Int]) { (m, v) => m(v) = v.length }
         src forall { v => map(v) == v.length }
       }
       
@@ -26,7 +26,7 @@ object HashMapSpecs extends Specification with ScalaCheck {
     }
     
     "preserve values across changes" in {
-      val prop = property { (map: HashMap[String, String], ls: List[String], f: (String)=>String) =>
+      val prop = property { (map: HashTrie[String, String], ls: List[String], f: (String)=>String) =>
         val filtered = ls filter { !map.contains(_) }
         
         filtered.length > 0 ==> {
@@ -41,7 +41,7 @@ object HashMapSpecs extends Specification with ScalaCheck {
     
     "calculate size" in {
       val prop = property { (ls: Set[Int], f: (Int)=>Int) =>
-        val map = ls.foldLeft(new HashMap[Int, Int]) { (m, v) => m(v) = f(v) }
+        val map = ls.foldLeft(new HashTrie[Int, Int]) { (m, v) => m(v) = f(v) }
         map.size == ls.size
       }
       
@@ -49,7 +49,7 @@ object HashMapSpecs extends Specification with ScalaCheck {
     }
     
     "remove ints" in {
-      val prop = property { map: HashMap[Int, String] =>
+      val prop = property { map: HashTrie[Int, String] =>
         map.size > 0 ==> {
           val (rm, _) = map.elements.next     // insufficient
           val newMap = map - rm
@@ -64,7 +64,7 @@ object HashMapSpecs extends Specification with ScalaCheck {
     }
     
     "remove strings" in {
-      val prop = property { map: HashMap[String, String] =>
+      val prop = property { map: HashTrie[String, String] =>
         map.size > 0 ==> {
           val (rm, _) = map.elements.next
           val newMap = map - rm
@@ -79,7 +79,7 @@ object HashMapSpecs extends Specification with ScalaCheck {
     }
     
     "define empty" in {
-      val prop = property { map: HashMap[String, String] =>
+      val prop = property { map: HashTrie[String, String] =>
         map.empty.size == 0
       }
       
@@ -87,10 +87,10 @@ object HashMapSpecs extends Specification with ScalaCheck {
     }
   }
   
-  implicit def arbHashMap[K](implicit ak: Arbitrary[List[K]]): Arbitrary[HashMap[K, String]] = {
+  implicit def arbHashTrie[K](implicit ak: Arbitrary[List[K]]): Arbitrary[HashTrie[K, String]] = {
     Arbitrary(for {
       keys <- ak.arbitrary
-    } yield keys.foldLeft(new HashMap[K, String]) { (m, k) => m(k) = k.toString })
+    } yield keys.foldLeft(new HashTrie[K, String]) { (m, k) => m(k) = k.toString })
   }
   
   implicit def arbSet[A](implicit arb: Arbitrary[List[A]]): Arbitrary[Set[A]] = {

@@ -1,4 +1,4 @@
-import com.codecommit.collection.HashMap
+import com.codecommit.collection.HashTrie
 
 import scala.collection.immutable.TreeHashMap
 
@@ -19,8 +19,8 @@ object HashPerf {
         indexes(i) = Math.random.toString
       }
       
-      val hashMapOp = "HashMap" -> time {
-        var map = HashMap[String, String]()
+      val hashMapOp = "HashTrie" -> time {
+        var map = HashTrie[String, String]()
         var i = 0
         
         while (i < indexes.length) {
@@ -78,7 +78,7 @@ object HashPerf {
         indexes(i) = Math.random.toString
       }
       
-      var hashMap = HashMap[String, String]()
+      var hashMap = HashTrie[String, String]()
       
       {
         var i = 0
@@ -101,7 +101,7 @@ object HashPerf {
       }
       
       
-      val hashMapOp = "HashMap" -> time {
+      val hashMapOp = "HashTrie" -> time {
         var i = 0
         while (i < indexes.length) {
           hashMap(indexes(i))
