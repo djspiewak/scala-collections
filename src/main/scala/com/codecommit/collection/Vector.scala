@@ -57,7 +57,7 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
   def apply(i: Int): T = {
     if (i >= 0 && i < length) {
       if (i >= tailOff) {
-			  tail(i & 0x01f).asInstanceOf[T]
+        tail(i & 0x01f).asInstanceOf[T]
       } else {
         var arr = root
         var level = shift
@@ -69,7 +69,7 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
         
         arr(i & 0x01f).asInstanceOf[T]
       }
-		} else throw new IndexOutOfBoundsException(i.toString)
+    } else throw new IndexOutOfBoundsException(i.toString)
   }
   
   def update[A >: T](i: Int, obj: A): Vector[A] = {
@@ -80,11 +80,11 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
         newTail(i & 0x01f) = obj.asInstanceOf[AnyRef]
         
         new Vector[A](length, shift, root, newTail)
-			} else {
+      } else {
         new Vector[A](length, shift, doAssoc(shift, root, i, obj), tail)
       }
-		} else if (i == length) {
-		  this + obj
+    } else if (i == length) {
+      this + obj
     } else throw new IndexOutOfBoundsException(i.toString)
   }
   
@@ -94,10 +94,10 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
     
     if (level == 0) {
       ret(i & 0x01f) = obj.asInstanceOf[AnyRef]
-		} else {
+    } else {
       val subidx = (i >>> level) & 0x01f
       ret(subidx) = doAssoc(level - 5, arr(subidx).asInstanceOf[Array[AnyRef]], i, obj)
-		}
+    }
     
     ret
   }
@@ -111,7 +111,7 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
       newTail(tail.length) = obj.asInstanceOf[AnyRef]
       
       new Vector[A](length + 1, shift, root, newTail)
-		} else {
+    } else {
       var (newRoot, expansion) = pushTail(shift - 5, root, tail, null)
       var newShift = shift
       
@@ -135,8 +135,8 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
         ret(arr.length - 1) = newChild
         
         return (ret, null)
-			} else subExpansion
-		}
+      } else subExpansion
+    }
     
     // expansion
     if (arr.length == 32) {
@@ -163,7 +163,7 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
       Array.copy(tail, 0, newTail, 0, newTail.length)
       
       new Vector[T](length - 1, shift, root, newTail)
-		} else {
+    } else {
       var (newRoot, pTail) = popTail(shift - 5, root, null)
       var newShift = shift
       
@@ -191,9 +191,9 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
         ret(arr.length - 1) = newChild
         
         return (ret, subPTail)
-			}
+      }
       subPTail
-		} else if (shift == 0) {
+    } else if (shift == 0) {
       arr(arr.length - 1)
     } else pTail
     
