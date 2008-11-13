@@ -1,6 +1,6 @@
 import com.codecommit.collection.HashMap
 
-import scala.collection.immutable.IntMap
+import scala.collection.immutable.TreeHashMap
 
 object HashPerf {
   import PerfLib._
@@ -14,15 +14,13 @@ object HashPerf {
     {
       title("Fill 100000 Random Keys")
       
-      val indexes = new Array[Int](100000)
-      var max = -1
+      val indexes = new Array[String](100000)
       for (i <- 0 until indexes.length) {
-        indexes(i) = Math.round(Math.random * 40000000).toInt - 20000000
-        max = Math.max(max, indexes(i))
+        indexes(i) = Math.random.toString
       }
       
       val hashMapOp = "HashMap" -> time {
-        var map = HashMap[Int, String]()
+        var map = HashMap[String, String]()
         var i = 0
         
         while (i < indexes.length) {
@@ -32,7 +30,7 @@ object HashPerf {
       }
       
       val mapOp = "Map" -> time {
-        var map = Map[Int, String]()
+        var map = Map[String, String]()
         var i = 0
         
         while (i < indexes.length) {
@@ -43,8 +41,8 @@ object HashPerf {
       
       hashMapOp compare mapOp
       
-      val intMapOp = "IntMap" -> time {
-        var map = IntMap[String]()
+      val intMapOp = "TreeHashMap" -> time {
+        var map = TreeHashMap[String, String]()
         var i = 0
         
         while (i < indexes.length) {
@@ -56,7 +54,7 @@ object HashPerf {
       hashMapOp compare intMapOp
       
       val mutableMapOp = "mutable.Map" -> time {
-        val map = scala.collection.mutable.Map[Int, String]()
+        val map = scala.collection.mutable.Map[String, String]()
         var i = 0
         
         while (i < indexes.length) {
@@ -75,14 +73,12 @@ object HashPerf {
     {
       title("Read 100000 Random Keys")
       
-      val indexes = new Array[Int](100000)
-      var max = -1
+      val indexes = new Array[String](100000)
       for (i <- 0 until indexes.length) {
-        indexes(i) = Math.round(Math.random * 40000000).toInt - 20000000
-        max = Math.max(max, indexes(i))
+        indexes(i) = Math.random.toString
       }
       
-      var hashMap = HashMap[Int, String]()
+      var hashMap = HashMap[String, String]()
       
       {
         var i = 0
@@ -93,7 +89,7 @@ object HashPerf {
         }
       }
       
-      var immutableMap = Map[Int, String]()
+      var immutableMap = Map[String, String]()
       
       {
         var i = 0
@@ -123,7 +119,7 @@ object HashPerf {
       
       hashMapOp compare mapOp
       
-      var intMap = IntMap[String]()
+      var intMap = TreeHashMap[String, String]()
       
       {
         var i = 0
@@ -134,7 +130,7 @@ object HashPerf {
         }
       }
       
-      val intMapOp = "IntMap" -> time {
+      val intMapOp = "TreeHashMap" -> time {
         var i = 0
         while (i < indexes.length) {
           intMap(indexes(i))
@@ -144,7 +140,7 @@ object HashPerf {
       
       hashMapOp compare intMapOp
       
-      val mutableMap = scala.collection.mutable.Map[Int, String]()
+      val mutableMap = scala.collection.mutable.Map[String, String]()
       
       {
         var i = 0
