@@ -162,5 +162,85 @@ object HashPerf {
       hashMapOp compare mutableMapOp
       div('=')
     }
+    
+    println()
+    
+    //==========================================================================
+    {
+      title("Loop Over 100000 Random Keys (#foreach)")
+      
+      val indexes = new Array[String](100000)
+      for (i <- 0 until indexes.length) {
+        indexes(i) = Math.random.toString
+      }
+      
+      var hashMap = HashTrie[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          hashMap = hashMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      var immutableMap = Map[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          immutableMap = immutableMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      
+      val hashMapOp = "HashTrie" -> time {
+        hashMap foreach { case (k, v) => () }
+      }
+      
+      val mapOp = "Map" -> time {
+        immutableMap foreach { case (k, v) => () }
+      }
+      
+      hashMapOp compare mapOp
+      
+      var intMap = TreeHashMap[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          intMap = intMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      val intMapOp = "TreeHashMap" -> time {
+        intMap foreach { case (k, v) => () }
+      }
+      
+      hashMapOp compare intMapOp
+      
+      val mutableMap = scala.collection.mutable.Map[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          mutableMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      val mutableMapOp = "mutable.Map" -> time {
+        mutableMap foreach { case (k, v) => () }
+      }
+      
+      hashMapOp compare mutableMapOp
+      div('=')
+    }
   }
 }
