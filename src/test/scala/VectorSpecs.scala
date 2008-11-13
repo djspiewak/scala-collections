@@ -1,7 +1,7 @@
 import org.specs._
 import org.scalacheck._
 
-import com.codecommit.collection.Vector
+import com.codecommit.collection.{EmptyVector, Vector}
 
 object VectorSpecs extends Specification with ScalaCheck {
   import Prop._
@@ -23,6 +23,15 @@ object VectorSpecs extends Specification with ScalaCheck {
       prop must pass
     }
     
+    "implement length" in {
+      val prop = property { (list: List[Int]) => 
+        val vec = list.foldLeft(Vector[Int]()) { _ + _ }
+        vec.length == list.length
+      }
+      
+      prop must pass
+    }
+    
     "replace single element" in {
       val prop = property { (vec: Vector[Int], i: Int) =>
         ((0 to vec.length) contains i) ==> {
@@ -34,24 +43,62 @@ object VectorSpecs extends Specification with ScalaCheck {
       prop must pass
     }
     
+    "fail on apply out-of-bounds" in {
+      val prop = property { (vec: Vector[Int], i: Int) =>
+        !((0 until vec.length) contains i) ==> {
+          try {
+            vec(i)
+            false
+          } catch {
+            case _: IndexOutOfBoundsException => true
+          }
+        }
+      }
+      
+      prop must pass
+    }
+    
+    "fail on update out-of-bounds" in {
+      val prop = property { (vec: Vector[Int], i: Int) =>
+        !((0 to vec.length) contains i) ==> {
+          try {
+            vec(i) = 42
+            false
+          } catch {
+            case _: IndexOutOfBoundsException => true
+          }
+        }
+      }
+      
+      prop must pass
+    }
+    
     "pop elements" in {
       val prop = property { vec: Vector[Int] =>
         vec.length > 0 ==> {
           val popped = vec.pop
-          
           var back = popped.length == vec.length - 1
-          var i = 0
           
-          while (i < popped.length) {
+          for (i <- 0 until popped.length) {
             back &&= popped(i) == vec(i)
-            i += 1
           }
           
           back
         }
       }
       
-      prop must pass
+      prop must pass(set(maxSize -> 3000, minTestsOk -> 1000))
+    }
+    
+    "fail on pop empty vector" in {
+      val caughtExcept = try {
+        EmptyVector.pop
+        false
+      } catch {
+        case _: IllegalStateException => true
+      }
+      
+      caughtExcept mustEqual true
     }
     
     "store multiple elements in order" in {
@@ -243,6 +290,26 @@ object VectorSpecs extends Specification with ScalaCheck {
       prop must pass
     }
     
+    "update subseq" in {
+      val prop = property { (v: Vector[Int], from: Int, end: Int, mi: Int) =>
+        try {
+          val sub = v.subseq(from, end)
+          val add = sub(mi) = 42
+          
+          var back = add.length == (if (mi == add.length) sub.length + 1 else sub.length)
+          for (i <- 0 until sub.length; if i != mi) {
+            back &&= add(i) == sub(i)
+          }
+          back && add(mi) == 42
+        } catch {
+          case _:IndexOutOfBoundsException => from < 0 || end >= v.length || !(0 to (end - from) contains mi)
+          case _:IllegalArgumentException => end <= from
+        }
+      }
+      
+      prop must pass
+    }
+    
     "map on subseq" in {
       val prop = property { (v: Vector[Int], from: Int, end: Int, f: (Int)=>Int) =>
         try {
@@ -295,14 +362,41 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement equals" in {
-      val prop = property { list: List[Int] => 
-        val vecA = list.foldLeft(Vector[Int]()) { _ + _ }
-        val vecB = list.foldLeft(Vector[Int]()) { _ + _ }
+      {
+        val prop = property { list: List[Int] => 
+          val vecA = list.foldLeft(Vector[Int]()) { _ + _ }
+          val vecB = list.foldLeft(Vector[Int]()) { _ + _ }
+          
+          vecA == vecB
+        }
         
-        vecA == vecB
+        prop must pass
       }
       
-      prop must pass
+      {
+        val prop = property { (vecA: Vector[Int], vecB: Vector[Int]) =>
+          vecA.length != vecB.length ==> (vecA != vecB)
+        }
+        
+        prop must pass
+      }
+      
+      {
+        val prop = property { (listA: List[Int], listB: List[Int]) =>
+          val vecA = listA.foldLeft(Vector[Int]()) { _ + _ }
+          val vecB = listB.foldLeft(Vector[Int]()) { _ + _ }
+          
+          listA != listB ==> (vecA != vecB)
+        }
+        
+        prop must pass
+      }
+      
+      {
+        val prop = property { (vec: Vector[Int], data: Int) => vec != data }
+        
+        prop must pass
+      }
     }
     
     "implement hashCode" in {
