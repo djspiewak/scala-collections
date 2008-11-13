@@ -32,7 +32,7 @@ final class HashTrie[K, +V] private (root: Node[K, V]) extends Map[K, V] {
 object HashTrie {
   def apply[K, V](pairs: (K, V)*) = pairs.foldLeft(new HashTrie[K, V]) { _ + _ }
   
-  def unapply[K, V](map: HashTrie[K, V]) = map.toSeq
+  def unapplySeq[K, V](map: HashTrie[K, V]) = map.toSeq
 }
 
 // ============================================================================
