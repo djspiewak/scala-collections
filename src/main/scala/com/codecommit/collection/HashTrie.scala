@@ -263,11 +263,9 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
   }
   
   def elements = {
-    val iters = table flatMap { n => 
-      if (n == null) Array[Iterator[(K, V)]]() else Array(n.elements)
+    table.foldLeft(emptyElements) { (it, e) =>
+      if (e == null) it else it ++ e.elements
     }
-    
-    iters.foldLeft(emptyElements) { _ ++ _ }
   }
   
   override def toString = "BitmappedNode(" + size + "," + table.filter(_ != null).toList.toString + ")"
@@ -346,10 +344,13 @@ private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]]) 
     }
   }
   
-  def elements = {
-    val iters = table map { _.elements }
-    iters.reduceLeft[Iterator[(K, V)]] { _ ++ _ }
-  }
+  def elements = table.foldLeft(emptyElements) { _ ++ _.elements }
   
   override def toString = "FullNode(" + table.foldLeft("") { _.toString + ", " + _.toString } + ")"
+  
+  private lazy val emptyElements: Iterator[(K, V)] = new Iterator[(K, V)] {
+    val hasNext = false
+    
+    val next = null
+  }
 }
