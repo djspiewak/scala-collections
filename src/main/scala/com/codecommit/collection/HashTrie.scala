@@ -118,7 +118,7 @@ private[collection] class LeafNode[K, +V](key: K, val hash: Int, value: V) exten
     } else if (this.hash == hash) {
       new CollisionNode(hash, this.key -> this.value, key -> value)
     } else {
-      BitmappedNode(shift)(this, new LeafNode(key, hash, value))
+      BitmappedNode(shift)(this, key, hash, value)
     }
   }
   
@@ -161,7 +161,7 @@ private[collection] class CollisionNode[K, +V](val hash: Int, bucket: List[(K, V
       
       new CollisionNode(hash, if (found) newBucket else (key, value) :: bucket)
     } else {
-      BitmappedNode(shift)(this, new LeafNode(key, hash, value))
+      BitmappedNode(shift)(this, key, hash, value)
     }
   }
   
@@ -282,16 +282,26 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
 
 
 private[collection] object BitmappedNode {
-  def apply[K, V](shift: Int)(nodes: SingleNode[K, V]*) = {
-    val table = new Array[Node[K, V]](nodes.foldLeft(0) { (x, node) =>
-      Math.max(x, (node.hash >>> shift) & 0x01f)
-    } + 1)
+  def apply[K, V](shift: Int)(node: SingleNode[K, V], key: K, hash: Int, value: V) = {
+    val table = new Array[Node[K, V]](Math.max((hash >>> shift) & 0x01f, (node.hash >>> shift) & 0x01f) + 1)
     
-    val bits = nodes.foldLeft(0) { (bits, node) =>
+    val preBits = {
       val i = (node.hash >>> shift) & 0x01f
       table(i) = node
+      1 << i
+    }
+    
+    val bits = {
+      val i = (hash >>> shift) & 0x01f
+      val mask = 1 << i
       
-      bits | (1 << i)
+      if ((preBits & mask) == mask) {
+        table(i) = (table(i)(shift + 5, key, hash) = value)
+      } else {
+        table(i) = new LeafNode(key, hash, value)
+      }
+      
+      preBits | mask
     }
     
     new BitmappedNode(shift)(table, bits)
