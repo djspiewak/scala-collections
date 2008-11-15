@@ -102,8 +102,12 @@ private[collection] class EmptyNode[K] extends Node[K, Nothing] {
   }
 }
 
+private[collection] abstract class SingleNode[K, +V] extends Node[K, V] {
+  val hash: Int
+}
 
-private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends Node[K, V] {
+
+private[collection] class LeafNode[K, +V](key: K, val hash: Int, value: V) extends SingleNode[K, V] {
   val size = 1
   
   def apply(key: K, hash: Int) = if (this.key == key) Some(value) else None
@@ -114,7 +118,7 @@ private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends N
     } else if (this.hash == hash) {
       new CollisionNode(hash, this.key -> this.value, key -> value)
     } else {
-      BitmappedNode(shift)(Array((this.key, this.hash, this.value), (key, hash, value)))
+      BitmappedNode(shift)(this, new LeafNode(key, hash, value))
     }
   }
   
@@ -133,7 +137,7 @@ private[collection] class LeafNode[K, +V](key: K, hash: Int, value: V) extends N
 }
 
 
-private[collection] class CollisionNode[K, +V](hash: Int, bucket: List[(K, V)]) extends Node[K, V] {
+private[collection] class CollisionNode[K, +V](val hash: Int, bucket: List[(K, V)]) extends SingleNode[K, V] {
   lazy val size = bucket.length
   
   def this(hash: Int, pairs: (K, V)*) = this(hash, pairs.toList)
@@ -157,8 +161,7 @@ private[collection] class CollisionNode[K, +V](hash: Int, bucket: List[(K, V)]) 
       
       new CollisionNode(hash, if (found) newBucket else (key, value) :: bucket)
     } else {
-      val tempBucket = ((key, value) :: bucket).map({ case (k, v) => (k, k.hashCode, v) })
-      BitmappedNode(shift)(tempBucket.toArray)   // not the most efficient, but not too bad
+      BitmappedNode(shift)(this, new LeafNode(key, hash, value))
     }
   }
   
@@ -279,24 +282,16 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
 
 
 private[collection] object BitmappedNode {
-  def apply[K, V](shift: Int)(pairs: Array[(K, Int, V)]) = {
-    val table = new Array[Node[K, V]](pairs.foldLeft(0) { (x, pair) =>
-      val (_, hash, _) = pair
-      Math.max(x, (hash >>> shift) & 0x01f)
+  def apply[K, V](shift: Int)(nodes: SingleNode[K, V]*) = {
+    val table = new Array[Node[K, V]](nodes.foldLeft(0) { (x, node) =>
+      Math.max(x, (node.hash >>> shift) & 0x01f)
     } + 1)
     
-    val bits = pairs.foldLeft(0) { (bits, pair) =>
-      val (key, hash, value) = pair
-      val i = (hash >>> shift) & 0x01f
-      val mask = 1 << i
+    val bits = nodes.foldLeft(0) { (bits, node) =>
+      val i = (node.hash >>> shift) & 0x01f
+      table(i) = node
       
-      if ((bits & mask) == mask) {
-        table(i) = (table(i)(shift + 5, key, hash) = value)
-      } else {
-        table(i) = new LeafNode(key, hash, value)
-      }
-    
-      bits | mask
+      bits | (1 << i)
     }
     
     new BitmappedNode(shift)(table, bits)
