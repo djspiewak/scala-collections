@@ -246,7 +246,7 @@ private[collection] class BitmappedNode[K, +V](shift: Int)(table: Array[Node[K, 
           if (log.toInt.toDouble == log) {      // last one
             table(log.toInt)
           } else {
-            val newTable = new Array[Node[K, V]](if (i + 1 == table.length) table.length - 1 else table.length)
+            val newTable = new Array[Node[K, V]](table.length)
             Array.copy(table, 0, newTable, 0, newTable.length)
             
             newTable(i) = null
