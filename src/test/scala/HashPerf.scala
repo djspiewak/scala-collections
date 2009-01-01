@@ -200,6 +200,109 @@ object HashPerf {
     
     //==========================================================================
     {
+      title("Remove 50000 Random Keys")
+      
+      val indexes = new Array[String](100000)
+      for (i <- 0 until indexes.length) {
+        indexes(i) = Math.random.toString
+      }
+      
+      var hashTrie = HashTrie[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          hashTrie = hashTrie(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      var immutableMap = Map[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          immutableMap = immutableMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      
+      val hashTrieOp = "HashTrie" -> time {
+        var i = 0
+        var map = hashTrie
+        while (i < indexes.length) {
+          map -= indexes(i)
+          i += 1
+        }
+      }
+      
+      val mapOp = "Map" -> time {
+        var i = 0
+        var map = immutableMap
+        
+        while (i < indexes.length) {
+          immutableMap -= indexes(i)
+          i += 1
+        }
+      }
+      
+      hashTrieOp compare mapOp
+      
+      var intMap = TreeHashMap[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          intMap = intMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      val intMapOp = "TreeHashMap" -> time {
+        var i = 0
+        var map = intMap
+        
+        while (i < indexes.length) {
+          map -= indexes(i)
+          i += 1
+        }
+      }
+      
+      hashTrieOp compare intMapOp
+      
+      var vectorMap = VectorHashMap[String, String]()
+      
+      {
+        var i = 0
+        
+        while (i < indexes.length) {
+          vectorMap = vectorMap(indexes(i)) = data
+          i += 1
+        }
+      }
+      
+      val vectorMapOp = "VectorHashMap" -> time {
+        var i = 0
+        var map = vectorMap
+        
+        while (i < indexes.length) {
+          map -= indexes(i)
+          i += 1
+        }
+      }
+      
+      hashTrieOp compare vectorMapOp
+      div('=')
+    }
+    
+    println()
+    
+    //==========================================================================
+    {
       title("Loop Over 100000 Random Keys (#foreach)")
       
       val indexes = new Array[String](100000)
