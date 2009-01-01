@@ -341,7 +341,7 @@ private[collection] class FullNode[K, +V](shift: Int)(table: Array[Node[K, V]]) 
       
       if (node.isInstanceOf[EmptyNode[_]]) {
         newTable(i) = null
-        new BitmappedNode(shift)(newTable, ~0 ^ mask)
+        new BitmappedNode(shift)(newTable, ~mask)
       } else {
         newTable(i) = node
         new FullNode(shift)(newTable)
