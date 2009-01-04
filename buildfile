@@ -8,8 +8,8 @@ desc 'A few collections classes for fun and profit'
 define 'collection' do
   project.version = '0.1.0'
   project.group = 'com.codecommit'
+ 
+  test.using :specs
   
-  test.using :specs=>true
-
   package :jar
 end
