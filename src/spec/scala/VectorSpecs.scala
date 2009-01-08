@@ -296,7 +296,7 @@ object VectorSpecs extends Specification with ScalaCheck {
           val sub = v.subseq(from, end)
           val add = sub(mi) = 42
           
-          var back = add.length == (if (mi == add.length) sub.length + 1 else sub.length)
+          var back = add.length == sub.length + (if (mi == sub.length) 1 else 0)
           for (i <- 0 until sub.length; if i != mi) {
             back &&= add(i) == sub(i)
           }
