@@ -9,13 +9,12 @@ import mutable.{Builder, ListBuffer}
  * An implementation of Okasaki's fast persistent Banker's Queue data structure
  * (provides a better constant factor than the default {@link scala.collection.immutable.Queue}).
  */
-class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], private val rsize: Int, _rear: =>Stream[A])
+class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], private val rsize: Int, private val rear: Stream[A])
     extends LinearSeq[A]
     with GenericTraversableTemplate[A, BankersQueue]
     with LinearSeqLike[A, BankersQueue[A]] {
       
   private lazy val front = _front
-  private lazy val rear = _rear
   
   override val companion: GenericCompanion[BankersQueue] = BankersQueue
   
