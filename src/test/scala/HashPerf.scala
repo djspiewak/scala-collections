@@ -1,4 +1,4 @@
-import com.codecommit.collection.{HashTrie, VectorHashMap}
+import com.codecommit.collection.HashTrie
 
 import scala.collection.immutable.TreeHashMap
 
@@ -41,7 +41,7 @@ object HashPerf {
       
       hashTrieOp compare mapOp
       
-      val intMapOp = "TreeHashMap" -> time {
+      /* val intMapOp = "TreeHashMap" -> time {
         var map = TreeHashMap[String, String]()
         var i = 0
         
@@ -51,19 +51,7 @@ object HashPerf {
         }
       }
       
-      hashTrieOp compare intMapOp
-      
-      val vectorMapOp = "VectorHashMap" -> time {
-        var map = VectorHashMap[String, String]()
-        var i = 0
-        
-        while (i < indexes.length) {
-          map = map(indexes(i)) = data
-          i += 1
-        }
-      }
-      
-      hashTrieOp compare vectorMapOp
+      hashTrieOp compare intMapOp */
       
       val mutableMapOp = "mutable.Map" -> time {
         val map = scala.collection.mutable.Map[String, String]()
@@ -131,7 +119,7 @@ object HashPerf {
       
       hashTrieOp compare mapOp
       
-      var intMap = TreeHashMap[String, String]()
+      /* var intMap = TreeHashMap[String, String]()
       
       {
         var i = 0
@@ -150,28 +138,7 @@ object HashPerf {
         }
       }
       
-      hashTrieOp compare intMapOp
-      
-      var vectorMap = VectorHashMap[String, String]()
-      
-      {
-        var i = 0
-        
-        while (i < indexes.length) {
-          vectorMap = vectorMap(indexes(i)) = data
-          i += 1
-        }
-      }
-      
-      val vectorMapOp = "VectorHashMap" -> time {
-        var i = 0
-        while (i < indexes.length) {
-          vectorMap(indexes(i))
-          i += 1
-        }
-      }
-      
-      hashTrieOp compare vectorMapOp
+      hashTrieOp compare intMapOp */
       
       val mutableMap = scala.collection.mutable.Map[String, String]()
       
@@ -251,7 +218,7 @@ object HashPerf {
       
       hashTrieOp compare mapOp
       
-      var intMap = TreeHashMap[String, String]()
+      /* var intMap = TreeHashMap[String, String]()
       
       {
         var i = 0
@@ -260,9 +227,9 @@ object HashPerf {
           intMap = intMap(indexes(i)) = data
           i += 1
         }
-      }
+      } */
       
-      val intMapOp = "TreeHashMap" -> time {
+      /* val intMapOp = "TreeHashMap" -> time {
         var i = 0
         var map = intMap
         
@@ -272,30 +239,8 @@ object HashPerf {
         }
       }
       
-      hashTrieOp compare intMapOp
+      hashTrieOp compare intMapOp */
       
-      var vectorMap = VectorHashMap[String, String]()
-      
-      {
-        var i = 0
-        
-        while (i < indexes.length) {
-          vectorMap = vectorMap(indexes(i)) = data
-          i += 1
-        }
-      }
-      
-      val vectorMapOp = "VectorHashMap" -> time {
-        var i = 0
-        var map = vectorMap
-        
-        while (i < indexes.length) {
-          map -= indexes(i)
-          i += 1
-        }
-      }
-      
-      hashTrieOp compare vectorMapOp
       div('=')
     }
     
@@ -343,7 +288,7 @@ object HashPerf {
       
       hashTrieOp compare mapOp
       
-      var intMap = TreeHashMap[String, String]()
+      /* var intMap = TreeHashMap[String, String]()
       
       {
         var i = 0
@@ -358,24 +303,7 @@ object HashPerf {
         intMap foreach { case (k, v) => () }
       }
       
-      hashTrieOp compare intMapOp
-      
-      var vectorMap = VectorHashMap[String, String]()
-      
-      {
-        var i = 0
-        
-        while (i < indexes.length) {
-          vectorMap = vectorMap(indexes(i)) = data
-          i += 1
-        }
-      }
-      
-      val vectorMapOp = "VectorHashMap" -> time {
-        vectorMap foreach { case (k, v) => () }
-      }
-      
-      hashTrieOp compare vectorMapOp
+      hashTrieOp compare intMapOp */
       
       val mutableMap = scala.collection.mutable.Map[String, String]()
       

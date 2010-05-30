@@ -43,21 +43,21 @@ package com.codecommit.collection
  * @author Rich Hickey
  */
 final class HashTrie[K, +V] private (root: Node[K, V]) extends Map[K, V] {
-  lazy val size = root.size
+  override lazy val size = root.size
   
   def this() = this(new EmptyNode[K])
   
   def get(key: K) = root(key, key.hashCode)
   
-  override def +[A >: V](pair: (K, A)) = pair match {
+  override def +[A >: V](pair: (K, A)): HashTrie[K, A] = pair match {
     case (k, v) => update(k, v)
   }
   
-  def update[A >: V](key: K, value: A) = new HashTrie(root(0, key, key.hashCode) = value)
+  override def update[A >: V](key: K, value: A): HashTrie[K, A] = new HashTrie(root(0, key, key.hashCode) = value)
   
   def -(key: K) = new HashTrie(root.remove(key, key.hashCode))
   
-  def elements = root.elements
+  def iterator = root.elements
   
   def empty[A]: HashTrie[K, A] = new HashTrie(new EmptyNode[K])
   

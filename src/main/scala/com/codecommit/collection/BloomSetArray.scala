@@ -46,7 +46,7 @@ class BloomSetArray[+T] private (k: Int, contents: Array[Int]) {
   
   private def twist(i: Int) = new Random(i).nextInt()
   
-  private def cloneArray[A](a: Array[A]) = {
+  private def cloneArray[A : Manifest](a: Array[A]) = {
     val back = new Array[A](a.length)
     Array.copy(a, 0, back, 0, a.length)
     back
