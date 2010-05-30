@@ -45,7 +45,7 @@ class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], pri
   
   def +[B >: A](b: B) = enqueue(b)
   
-  def enqueue[B >: A](b: B) = check(new BankersQueue(fsize, front, rsize + 1, Stream.cons(b, rear)))
+  def enqueue[B >: A](b: B) = check(new BankersQueue(fsize, _front, rsize + 1, Stream.cons(b, rear)))
   
   def dequeue: (A, BankersQueue[A]) = front match {
     case hd #:: tail => (hd, check(new BankersQueue(fsize - 1, tail, rsize, rear)))
