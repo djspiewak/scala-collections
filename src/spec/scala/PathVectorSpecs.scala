@@ -30,7 +30,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     "have infinite bounds" in {
       vector.length mustEqual 0     // finite length
       
-      val prop = property { i: Int =>   // infinite bounds
+      val prop = forAll { i: Int =>   // infinite bounds
         i >= 0 ==> (vector(i) == 0)
       }
       
@@ -38,7 +38,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "store a single element" in {
-      val prop = property { (i: Int, e: Int) =>
+      val prop = forAll { (i: Int, e: Int) =>
         i >= 0 ==> ((vector(0) = e)(0) == e)
       }
       
@@ -46,7 +46,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "replace single element" in {
-      val prop = property { (vec: PathVector[String], i: Int) =>
+      val prop = forAll { (vec: PathVector[String], i: Int) =>
         i >= 0 ==> {
           val newPathVector = (vec(i) = "test")(i) = "newTest"
           newPathVector(i) == "newTest"
@@ -57,7 +57,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "store multiple elements in order" in {
-      val prop = property { list: List[Int] =>
+      val prop = forAll { list: List[Int] =>
         val newPathVector = list.foldLeft(vector) { _ + _ }
         val res = for (i <- 0 until list.length) yield newPathVector(i) == list(i)
         
@@ -79,7 +79,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     
     "store at arbitrary points" in {
       val vector = PathVector(1, 2, 3, 4, 5)
-      val prop = property { others: List[(Int, Int)] =>
+      val prop = forAll { others: List[(Int, Int)] =>
         val (newPathVector, resMap) = others.foldLeft(vector, Map[Int, Int]()) { (inTuple, tuple) =>
           val (i, value) = tuple
           val (vec, map) = inTuple
@@ -98,7 +98,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement filter" in {
-      val prop = property { (vec: PathVector[Int], f: (Int)=>Boolean) =>
+      val prop = forAll { (vec: PathVector[Int], f: (Int)=>Boolean) =>
         val filtered = vec filter f
         
         var back = filtered forall f
@@ -114,7 +114,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement foldLeft" in {
-      val prop = property { list: List[Int] =>
+      val prop = forAll { list: List[Int] =>
         val vec = list.foldLeft(new PathVector[Int]) { _ + _ }
         vec.foldLeft(0) { _ + _ } == list.foldLeft(0) { _ + _ }
       }
@@ -123,7 +123,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement forall" in {
-      val prop = property { (vec: PathVector[Int], f: (Int)=>Boolean) =>
+      val prop = forAll { (vec: PathVector[Int], f: (Int)=>Boolean) =>
         val bool = vec forall f
         
         var back = true
@@ -138,7 +138,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement map" in {
-      val prop = property { (vec: PathVector[Int], f: (Int)=>Int) =>
+      val prop = forAll { (vec: PathVector[Int], f: (Int)=>Int) =>
         val mapped = vec map f
         
         var back = vec.length == mapped.length
@@ -152,7 +152,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement reverse" in {
-      val prop = property { v: PathVector[Int] =>
+      val prop = forAll { v: PathVector[Int] =>
         val reversed = v.reverse
         
         var back = v.length == reversed.length
@@ -166,7 +166,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "append to reverse" in {
-      val prop = property { (v: PathVector[Int], n: Int) =>
+      val prop = forAll { (v: PathVector[Int], n: Int) =>
         val rev = v.reverse
         val add = rev + n
         
@@ -181,7 +181,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "map on reverse" in {
-      val prop = property { (v: PathVector[Int], f: (Int)=>Int) =>
+      val prop = forAll { (v: PathVector[Int], f: (Int)=>Int) =>
         val rev = v.reverse
         val mapped = rev map f
         
@@ -196,7 +196,8 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement subseq" in {
-      val prop = property { (v: PathVector[Int], from: Int, end: Int) =>
+      skip("Disabling for now")
+      val prop = forAll { (v: PathVector[Int], from: Int, end: Int) =>
         try {
           val sub = v.subseq(from, end)
           
@@ -215,7 +216,9 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "append to subseq" in {
-      val prop = property { (v: PathVector[Int], from: Int, end: Int, n: Int) =>
+      skip("Disabling for now")
+      
+      val prop = forAll { (v: PathVector[Int], from: Int, end: Int, n: Int) =>
         try {
           val sub = v.subseq(from, end)
           val add = sub + n
@@ -235,7 +238,8 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "map on subseq" in {
-      val prop = property { (v: PathVector[Int], from: Int, end: Int, f: (Int)=>Int) =>
+      skip("Disabling for now")
+      val prop = forAll { (v: PathVector[Int], from: Int, end: Int, f: (Int)=>Int) =>
         try {
           val sub = v.subseq(from, end)
           val mapped = sub map f
@@ -255,7 +259,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement zip" in {
-      val prop = property { (first: PathVector[Int], second: PathVector[Double]) =>
+      val prop = forAll { (first: PathVector[Int], second: PathVector[Double]) =>
         val zip = first zip second
         
         var back = zip.length == Math.max(first.length, second.length)
@@ -270,7 +274,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement zipWithIndex" in {
-      val prop = property { vec: PathVector[Int] =>
+      val prop = forAll { vec: PathVector[Int] =>
         val zip = vec.zipWithIndex
         
         var back = zip.length == vec.length
@@ -286,7 +290,7 @@ object PathVectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement equals" in {
-      val prop = property { list: List[Int] => 
+      val prop = forAll { list: List[Int] => 
         val vecA = list.foldLeft(new PathVector[Int]) { _ + _ }
         val vecB = list.foldLeft(new PathVector[Int]) { _ + _ }
         

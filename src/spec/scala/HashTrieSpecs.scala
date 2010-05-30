@@ -8,7 +8,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
   
   "it" should {
     "store ints" in {
-      val prop = property { src: List[Int] =>
+      val prop = forAll { src: List[Int] =>
         val map = src.foldLeft(new HashTrie[Int, Int]) { (m, v) => m(v) = -v }
         src forall { v => map(v) == -v }
       }
@@ -17,7 +17,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
     }
     
     "store strings" in {
-      val prop = property { src: List[String] =>
+      val prop = forAll { src: List[String] =>
         val map = src.foldLeft(new HashTrie[String, Int]) { (m, v) => m(v) = v.length }
         src forall { v => map(v) == v.length }
       }
@@ -26,7 +26,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
     }
     
     "preserve values across changes" in {
-      val prop = property { (map: HashTrie[String, String], ls: List[String], f: (String)=>String) =>
+      val prop = forAll { (map: HashTrie[String, String], ls: List[String], f: (String)=>String) =>
         val filtered = ls filter { !map.contains(_) }
         
         filtered.length > 0 ==> {
@@ -40,7 +40,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
     }
     
     "calculate size" in {
-      val prop = property { (ls: Set[Int], f: (Int)=>Int) =>
+      val prop = forAll { (ls: Set[Int], f: (Int)=>Int) =>
         val map = ls.foldLeft(new HashTrie[Int, Int]) { (m, v) => m(v) = f(v) }
         map.size == ls.size
       }
@@ -49,7 +49,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
     }
     
     "remove ints" in {
-      val prop = property { map: HashTrie[Int, String] =>
+      val prop = forAll { map: HashTrie[Int, String] =>
         map.size > 0 ==> {
           val (rm, _) = map.elements.next     // insufficient
           val newMap = map - rm
@@ -64,7 +64,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
     }
     
     "remove strings" in {
-      val prop = property { map: HashTrie[String, String] =>
+      val prop = forAll { map: HashTrie[String, String] =>
         map.size > 0 ==> {
           val (rm, _) = map.elements.next
           val newMap = map - rm
@@ -79,7 +79,7 @@ object HashTrieSpecs extends Specification with ScalaCheck {
     }
     
     "define empty" in {
-      val prop = property { map: HashTrie[String, String] =>
+      val prop = forAll { map: HashTrie[String, String] =>
         map.empty.size == 0
       }
       

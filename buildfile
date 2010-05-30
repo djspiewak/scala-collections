@@ -1,6 +1,5 @@
 require 'buildr/scala'
 #require 'buildr/java/cobertura'
-require 'buildr/groovy'
 
 repositories.remote << 'http://repo1.maven.org/maven2/'
 

@@ -16,7 +16,7 @@ object VectorSpecs extends Specification with ScalaCheck {
   
   "vector" should {
     "store a single element" in {
-      val prop = property { (i: Int, e: Int) =>
+      val prop = forAll { (i: Int, e: Int) =>
         i >= 0 ==> ((vector(0) = e)(0) == e)
       }
       
@@ -24,7 +24,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement length" in {
-      val prop = property { (list: List[Int]) => 
+      val prop = forAll { (list: List[Int]) => 
         val vec = list.foldLeft(Vector[Int]()) { _ + _ }
         vec.length == list.length
       }
@@ -33,7 +33,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "replace single element" in {
-      val prop = property { (vec: Vector[Int], i: Int) =>
+      val prop = forAll { (vec: Vector[Int], i: Int) =>
         ((0 to vec.length) contains i) ==> {
           val newVector = (vec(i) = "test")(i) = "newTest"
           newVector(i) == "newTest"
@@ -44,7 +44,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "fail on apply out-of-bounds" in {
-      val prop = property { (vec: Vector[Int], i: Int) =>
+      val prop = forAll { (vec: Vector[Int], i: Int) =>
         !((0 until vec.length) contains i) ==> {
           try {
             vec(i)
@@ -59,7 +59,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "fail on update out-of-bounds" in {
-      val prop = property { (vec: Vector[Int], i: Int) =>
+      val prop = forAll { (vec: Vector[Int], i: Int) =>
         !((0 to vec.length) contains i) ==> {
           try {
             vec(i) = 42
@@ -74,7 +74,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "pop elements" in {
-      val prop = property { vec: Vector[Int] =>
+      val prop = forAll { vec: Vector[Int] =>
         vec.length > 0 ==> {
           val popped = vec.pop
           var back = popped.length == vec.length - 1
@@ -102,7 +102,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "store multiple elements in order" in {
-      val prop = property { list: List[Int] =>
+      val prop = forAll { list: List[Int] =>
         val newVector = list.foldLeft(vector) { _ + _ }
         val res = for (i <- 0 until list.length) yield newVector(i) == list(i)
         
@@ -123,7 +123,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement filter" in {
-      val prop = property { (vec: Vector[Int], f: (Int)=>Boolean) =>
+      val prop = forAll { (vec: Vector[Int], f: (Int)=>Boolean) =>
         val filtered = vec filter f
         
         var back = filtered forall f
@@ -139,7 +139,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement foldLeft" in {
-      val prop = property { list: List[Int] =>
+      val prop = forAll { list: List[Int] =>
         val vec = list.foldLeft(Vector[Int]()) { _ + _ }
         vec.foldLeft(0) { _ + _ } == list.foldLeft(0) { _ + _ }
       }
@@ -148,7 +148,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement forall" in {
-      val prop = property { (vec: Vector[Int], f: (Int)=>Boolean) =>
+      val prop = forAll { (vec: Vector[Int], f: (Int)=>Boolean) =>
         val bool = vec forall f
         
         var back = true
@@ -163,7 +163,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement flatMap" in {
-      val prop = property { (vec: Vector[Int], f: (Int)=>Vector[Int]) =>
+      val prop = forAll { (vec: Vector[Int], f: (Int)=>Vector[Int]) =>
         val mapped = vec flatMap f
         
         var back = true
@@ -192,7 +192,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement map" in {
-      val prop = property { (vec: Vector[Int], f: (Int)=>Int) =>
+      val prop = forAll { (vec: Vector[Int], f: (Int)=>Int) =>
         val mapped = vec map f
         
         var back = vec.length == mapped.length
@@ -206,7 +206,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement reverse" in {
-      val prop = property { v: Vector[Int] =>
+      val prop = forAll { v: Vector[Int] =>
         val reversed = v.reverse
         
         var back = v.length == reversed.length
@@ -220,7 +220,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "append to reverse" in {
-      val prop = property { (v: Vector[Int], n: Int) =>
+      val prop = forAll { (v: Vector[Int], n: Int) =>
         val rev = v.reverse
         val add = rev + n
         
@@ -235,7 +235,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "map on reverse" in {
-      val prop = property { (v: Vector[Int], f: (Int)=>Int) =>
+      val prop = forAll { (v: Vector[Int], f: (Int)=>Int) =>
         val rev = v.reverse
         val mapped = rev map f
         
@@ -250,7 +250,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement subseq" in {
-      val prop = property { (v: Vector[Int], from: Int, end: Int) =>
+      val prop = forAll { (v: Vector[Int], from: Int, end: Int) =>
         try {
           val sub = v.subseq(from, end)
           
@@ -271,7 +271,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "append to subseq" in {
-      val prop = property { (v: Vector[Int], from: Int, end: Int, n: Int) =>
+      val prop = forAll { (v: Vector[Int], from: Int, end: Int, n: Int) =>
         try {
           val sub = v.subseq(from, end)
           val add = sub + n
@@ -291,7 +291,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "update subseq" in {
-      val prop = property { (v: Vector[Int], from: Int, end: Int, mi: Int) =>
+      val prop = forAll { (v: Vector[Int], from: Int, end: Int, mi: Int) =>
         try {
           val sub = v.subseq(from, end)
           val add = sub(mi) = 42
@@ -311,7 +311,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "map on subseq" in {
-      val prop = property { (v: Vector[Int], from: Int, end: Int, f: (Int)=>Int) =>
+      val prop = forAll { (v: Vector[Int], from: Int, end: Int, f: (Int)=>Int) =>
         try {
           val sub = v.subseq(from, end)
           val mapped = sub map f
@@ -331,7 +331,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement zip" in {
-      val prop = property { (first: Vector[Int], second: Vector[Double]) =>
+      val prop = forAll { (first: Vector[Int], second: Vector[Double]) =>
         val zip = first zip second
         
         var back = zip.length == Math.min(first.length, second.length)
@@ -346,7 +346,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     }
     
     "implement zipWithIndex" in {
-      val prop = property { vec: Vector[Int] =>
+      val prop = forAll { vec: Vector[Int] =>
         val zip = vec.zipWithIndex
         
         var back = zip.length == vec.length
@@ -363,7 +363,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     
     "implement equals" in {
       {
-        val prop = property { list: List[Int] => 
+        val prop = forAll { list: List[Int] => 
           val vecA = list.foldLeft(Vector[Int]()) { _ + _ }
           val vecB = list.foldLeft(Vector[Int]()) { _ + _ }
           
@@ -374,7 +374,7 @@ object VectorSpecs extends Specification with ScalaCheck {
       }
       
       {
-        val prop = property { (vecA: Vector[Int], vecB: Vector[Int]) =>
+        val prop = forAll { (vecA: Vector[Int], vecB: Vector[Int]) =>
           vecA.length != vecB.length ==> (vecA != vecB)
         }
         
@@ -382,7 +382,7 @@ object VectorSpecs extends Specification with ScalaCheck {
       }
       
       {
-        val prop = property { (listA: List[Int], listB: List[Int]) =>
+        val prop = forAll { (listA: List[Int], listB: List[Int]) =>
           val vecA = listA.foldLeft(Vector[Int]()) { _ + _ }
           val vecB = listB.foldLeft(Vector[Int]()) { _ + _ }
           
@@ -393,14 +393,14 @@ object VectorSpecs extends Specification with ScalaCheck {
       }
       
       {
-        val prop = property { (vec: Vector[Int], data: Int) => vec != data }
+        val prop = forAll { (vec: Vector[Int], data: Int) => vec != data }
         
         prop must pass
       }
     }
     
     "implement hashCode" in {
-      val prop = property { list: List[Int] =>
+      val prop = forAll { list: List[Int] =>
         val vecA = list.foldLeft(Vector[Int]()) { _ + _ }
         val vecB = list.foldLeft(Vector[Int]()) { _ + _ }
         
