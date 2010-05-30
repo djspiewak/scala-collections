@@ -4,5 +4,5 @@ buildr test:compile
 
 if [ "$?" ]; then
   echo ===============================================================================
-  exec java -Xmx2048m -Xms512m -server -cp "${SCALA_HOME}/lib/scala-library.jar:target/classes:target/test/classes" VectorPerf
+  exec java -Xmx2048m -Xms512m -server -cp "${SCALA28_HOME}/lib/scala-library.jar:target/classes:target/test/classes" QueuePerf
 fi
