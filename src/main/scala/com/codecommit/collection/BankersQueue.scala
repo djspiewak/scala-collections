@@ -9,7 +9,7 @@ import mutable.{Builder, ListBuffer}
  * An implementation of Okasaki's fast persistent Banker's Queue data structure
  * (provides a better constant factor than the default {@link scala.collection.immutable.Queue}).
  */
-class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], private val rsize: Int, private val rear: Stream[A])
+class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], private val rsize: Int, private val rear: List[A])
     extends LinearSeq[A]
     with GenericTraversableTemplate[A, BankersQueue]
     with LinearSeqLike[A, BankersQueue[A]] {
@@ -45,7 +45,7 @@ class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], pri
   
   def +[B >: A](b: B) = enqueue(b)
   
-  def enqueue[B >: A](b: B) = check(new BankersQueue(fsize, _front, rsize + 1, Stream.cons(b, rear)))
+  def enqueue[B >: A](b: B) = check(new BankersQueue(fsize, _front, rsize + 1, b :: rear))
   
   def dequeue: (A, BankersQueue[A]) = front match {
     case hd #:: tail => (hd, check(new BankersQueue(fsize - 1, tail, rsize, rear)))
@@ -58,7 +58,7 @@ class BankersQueue[+A] private (private val fsize: Int, _front: =>Stream[A], pri
     if (q.rsize <= q.fsize)
       q
     else
-      new BankersQueue(q.fsize + q.rsize, q.front ++ q.rear.reverse, 0, Stream())
+      new BankersQueue(q.fsize + q.rsize, q.front ++ q.rear.reverse, 0, Nil)
   }
 }
 
@@ -66,9 +66,9 @@ object BankersQueue extends SeqFactory[BankersQueue] {
   implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, BankersQueue[A]] = new GenericCanBuildFrom[A]
   
   def newBuilder[A]: Builder[A, BankersQueue[A]] =
-    new ListBuffer[A] mapResult { x => new BankersQueue[A](x.length, x.reverse.toStream, 0, Stream()) }
+    new ListBuffer[A] mapResult { x => new BankersQueue[A](x.length, x.reverse.toStream, 0, Nil) }
   
-  override def empty[A]: BankersQueue[A] = new BankersQueue[A](0, Stream(), 0, Stream())
+  override def empty[A]: BankersQueue[A] = new BankersQueue[A](0, Stream(), 0, Nil)
   
-  override def apply[A](xs: A*): BankersQueue[A] = new BankersQueue[A](xs.length, xs.reverse.toStream, 0, Stream())
+  override def apply[A](xs: A*): BankersQueue[A] = new BankersQueue[A](xs.length, xs.reverse.toStream, 0, Nil)
 }
