@@ -120,5 +120,60 @@ object QueuePerf {
       bankersQueueOp compare queueOp
       div('=')
     }
+    
+    // ==========================================================================
+    {
+      title("Randomly Enqueue AND Dequeue 10,000 values")
+      
+      val (_, data) = (1 to 10000).foldLeft((0, List[(Int, Int)]())) {
+        case ((total, tail), _) => {
+          val numen = Math.round(Math.random * 200).toInt + 1
+          val back = total + numen
+          val numde = Math.round(Math.random * (back - 1)).toInt
+          
+          (back - numde, (numen -> numde) :: tail)
+        }
+      }
+      
+      val rdata = data.reverse
+      
+      val bankersQueueOp = "BankersQueue" -> time {
+        var q = BankersQueue[Int]()
+        
+        for ((numen, numde) <- rdata) {
+          var i = 0
+          while (i < numen) {
+            q = q enqueue 0
+            i += 1
+          }
+          i = 0
+          while (i < numde) {
+            q = q.dequeue._2
+            i += 1
+          }
+        }
+      }
+      
+      val queueOp = "Queue" -> time {
+        var q = Queue[Int]()
+        
+        for ((numen, numde) <- rdata) {
+          var i = 0
+          while (i < numen) {
+            q = q enqueue 0
+            i += 1
+          }
+          i = 0
+          while (i < numde) {
+            q = q.dequeue._2
+            i += 1
+          }
+        }
+      }
+      
+      bankersQueueOp compare queueOp
+      
+      div('=')
+    }
   }
 }
