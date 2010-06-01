@@ -1,4 +1,4 @@
-import com.codecommit.collection.BankersQueue
+import com.codecommit.collection.{BankersQueue, FingerQueue}
 import scala.collection.immutable.Queue
 
 object QueuePerf {
@@ -16,16 +16,6 @@ object QueuePerf {
         data(i) = Math.round(Math.random).toInt
       }
       
-      val bankersQueueOp = "BankersQueue" -> time {
-        var q = BankersQueue[Int]()
-        var i = 0
-        
-        while (i < data.length) {
-          q += data(i)
-          i += 1
-        }
-      }
-      
       val queueOp = "Queue" -> time {
         var q = Queue[Int]()
         var i = 0
@@ -36,7 +26,30 @@ object QueuePerf {
         }
       }
       
+      val bankersQueueOp = "BankersQueue" -> time {
+        var q = BankersQueue[Int]()
+        var i = 0
+        
+        while (i < data.length) {
+          q += data(i)
+          i += 1
+        }
+      }
+      
       bankersQueueOp compare queueOp
+      
+      val fingerQueueOp = "FingerQueue" -> time {
+        var q = FingerQueue[Int]()
+        var i = 0
+        
+        while (i < data.length) {
+          q += data(i)
+          i += 1
+        }
+      }
+      
+      fingerQueueOp compare queueOp
+      
       div('=')
     }
     
@@ -49,18 +62,9 @@ object QueuePerf {
         data(i) = Math.round(Math.random).toInt
       }
       
-      val bq = (BankersQueue[Int]() /: data) { _ + _ }
       val rq = (Queue[Int]() /: data) { _ enqueue _ }
-      
-      val bankersQueueOp = "BankersQueue" -> time {
-        var q = bq
-        var i = 0
-        
-        while (i < data.length) {
-          q = q.dequeue._2
-          i += 1
-        }
-      }
+      val bq = (BankersQueue[Int]() /: data) { _ + _ }
+      val fq = (FingerQueue[Int]() /: data) { _ + _ }
       
       val queueOp = "Queue" -> time {
         var q = rq
@@ -72,7 +76,30 @@ object QueuePerf {
         }
       }
       
+      val bankersQueueOp = "BankersQueue" -> time {
+        var q = bq
+        var i = 0
+        
+        while (i < data.length) {
+          q = q.dequeue._2
+          i += 1
+        }
+      }
+      
       bankersQueueOp compare queueOp
+      
+      val fingerQueueOp = "FingerQueue" -> time {
+        var q = fq
+        var i = 0
+        
+        while (i < data.length) {
+          q = q.dequeue._2
+          i += 1
+        }
+      }
+      
+      fingerQueueOp compare queueOp
+      
       div('=')
     }
     
@@ -83,6 +110,21 @@ object QueuePerf {
       val data = new Array[Int](100000)
       for (i <- 0 until data.length) {
         data(i) = Math.round(Math.random).toInt
+      }
+      
+      val queueOp = "Queue" -> time {
+        var q = Queue[Int]()
+        var i = 0
+        
+        while (i < data.length) {
+          q = q enqueue data(i)
+          i += 1
+        }
+        
+        while (i < data.length) {
+          q = q.dequeue._2
+          i += 1
+        }
       }
       
       val bankersQueueOp = "BankersQueue" -> time {
@@ -102,14 +144,18 @@ object QueuePerf {
         }
       }
       
-      val queueOp = "Queue" -> time {
-        var q = Queue[Int]()
+      bankersQueueOp compare queueOp
+      
+      val fingerQueueOp = "FingerQueue" -> time {
+        var q = FingerQueue[Int]()
         var i = 0
         
         while (i < data.length) {
-          q = q enqueue data(i)
+          q += data(i)
           i += 1
         }
+        
+        i = 0
         
         while (i < data.length) {
           q = q.dequeue._2
@@ -117,7 +163,8 @@ object QueuePerf {
         }
       }
       
-      bankersQueueOp compare queueOp
+      fingerQueueOp compare queueOp
+      
       div('=')
     }
     
@@ -137,23 +184,6 @@ object QueuePerf {
       
       val rdata = data.reverse
       
-      val bankersQueueOp = "BankersQueue" -> time {
-        var q = BankersQueue[Int]()
-        
-        for ((numen, numde) <- rdata) {
-          var i = 0
-          while (i < numen) {
-            q = q enqueue 0
-            i += 1
-          }
-          i = 0
-          while (i < numde) {
-            q = q.dequeue._2
-            i += 1
-          }
-        }
-      }
-      
       val queueOp = "Queue" -> time {
         var q = Queue[Int]()
         
@@ -171,7 +201,43 @@ object QueuePerf {
         }
       }
       
+      val bankersQueueOp = "BankersQueue" -> time {
+        var q = BankersQueue[Int]()
+        
+        for ((numen, numde) <- rdata) {
+          var i = 0
+          while (i < numen) {
+            q = q enqueue 0
+            i += 1
+          }
+          i = 0
+          while (i < numde) {
+            q = q.dequeue._2
+            i += 1
+          }
+        }
+      }
+      
       bankersQueueOp compare queueOp
+      
+      val fingerQueueOp = "FingerQueue" -> time {
+        var q = FingerQueue[Int]()
+        
+        for ((numen, numde) <- rdata) {
+          var i = 0
+          while (i < numen) {
+            q = q enqueue 0
+            i += 1
+          }
+          i = 0
+          while (i < numde) {
+            q = q.dequeue._2
+            i += 1
+          }
+        }
+      }
+      
+      fingerQueueOp compare queueOp
       
       div('=')
     }
