@@ -30,17 +30,7 @@ object FingerTree {
     
     def +:[B >: A](b: B) = Deep(One(b), Empty, One(a))
     
-    def +:[B >: A](node: Node[B]) = node match {
-      case Node2(b, c) => Deep(Two(b, c), Empty, One(a))
-      case Node3(b, c, d) => Deep(Two(b, c), Empty, Two(d, a))
-    }
-    
     def +[B >: A](b: B) = Deep(One(a), Empty, One(b))
-    
-    def +[B >: A](node: Node[B]) = node match {
-      case Node2(b, c) => Deep(One(a), Empty, Two(b, c))
-      case Node3(b, c, d) => Deep(Two(a, b), Empty, Two(c, d))
-    }
     
     def viewLeft = FTConsLeft[FingerTree, A](a, Empty)
     def viewRight = FTConsRight[FingerTree, A](Empty, a)
