@@ -53,6 +53,8 @@ object FingerTree {
         a
       }
     }
+    
+    override def toString = "FingerTree(Single(%s))".format(a)
   }
   
   case class Deep[+A](prefix: List[A], tree: FingerTree[Node[A]], suffix: List[A]) extends FingerTree[A] {
@@ -75,24 +77,38 @@ object FingerTree {
     }
     
     def viewLeft = {
-      def deep(prefix: List[A], tree: FingerTree[Node[A]], suffix: List[A]) = tree.viewLeft match {
-        case FTConsLeft(a, newTree) => Deep(a.toList, newTree, suffix)
-        case FTNilLeft() => (suffix :\ (Empty: FingerTree[A])) { _ +: _ }
+      def deep(prefix: List[A], tree: FingerTree[Node[A]], suffix: List[A]) = prefix match {
+        case Nil => {
+          tree.viewLeft match {
+            case FTConsLeft(a, newTree) => Deep(a.toList, newTree, suffix)
+            case FTNilLeft() => (suffix :\ (Empty: FingerTree[A])) { _ +: _ }
+          }
+        }
+        
+        case prefix => Deep(prefix, tree, suffix)
       }
       
       FTConsLeft(prefix.head, deep(prefix.tail, tree, suffix))
     }
     
     def viewRight = {
-      def deep(prefix: List[A], tree: FingerTree[Node[A]], suffix: List[A]) = tree.viewRight match {
-        case FTConsRight(newTree, a) => Deep(prefix, newTree, a.toList)
-        case FTNilRight() => (prefix :\ (Empty: FingerTree[A])) { _ +: _ }
+      def deep(prefix: List[A], tree: FingerTree[Node[A]], suffix: List[A]) = suffix match {
+        case Nil => {
+          tree.viewRight match {
+            case FTConsRight(newTree, a) => Deep(prefix, newTree, a.toList)
+            case FTNilRight() => (prefix :\ (Empty: FingerTree[A])) { _ +: _ }
+          }
+        }
+        
+        case suffix => Deep(prefix, tree, suffix)
       }
       
       FTConsRight(deep(prefix, tree, suffix dropRight 1), suffix.last)
     }
     
     def iterator = prefix.iterator ++ (tree.iterator flatMap { _.toList.iterator }) ++ suffix.iterator
+    
+    override def toString = "FingerTree(%s, %s, %s)".format(prefix, tree, suffix)
   }
   
   case object Empty extends FingerTree[Nothing] {
@@ -116,6 +132,8 @@ object FingerTree {
       
       def next = throw new NoSuchElementException
     }
+    
+    override def toString = "FingerTree(Empty)"
   }
   
  
@@ -125,10 +143,14 @@ object FingerTree {
   
   case class Node2[+A](a1: A, a2: A) extends Node[A] {
     def toList = List(a1, a2)
+    
+    override def toString = "Node2(%s, %s)".format(a1, a2)
   }
   
   case class Node3[+A](a1: A, a2: A, a3: A) extends Node[A] {
     def toList = List(a1, a2, a3)
+    
+    override def toString = "Node3(%s, %s, %s)".format(a1, a2, a3)
   }
   
   
