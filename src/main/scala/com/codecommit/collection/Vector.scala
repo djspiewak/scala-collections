@@ -35,6 +35,7 @@
 package com.codecommit.collection
 
 import Vector._
+import VectorCases._
 
 /**
  * A straight port of Clojure's <code>PersistentVector</code> class.
@@ -42,7 +43,7 @@ import Vector._
  * @author Daniel Spiewak
  * @author Rich Hickey
  */
-class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail: Array[AnyRef]) extends RandomAccessSeq[T] { outer =>
+class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef]) extends RandomAccessSeq[T] { outer =>
   private val tailOff = length - tail.length
   
   /*
@@ -52,21 +53,14 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
    * (somewhat dynamically-typed) implementation in place.
    */
   
-  private[collection] def this() = this(0, 5, EmptyArray, EmptyArray)
+  private[collection] def this() = this(0, Zero, EmptyArray)
   
   def apply(i: Int): T = {
     if (i >= 0 && i < length) {
       if (i >= tailOff) {
         tail(i & 0x01f).asInstanceOf[T]
       } else {
-        var arr = root
-        var level = shift
-        
-        while (level > 0) {
-          arr = arr((i >>> level) & 0x01f).asInstanceOf[Array[AnyRef]]
-          level -= 5
-        }
-        
+        var arr = trie(i)
         arr(i & 0x01f).asInstanceOf[T]
       }
     } else throw new IndexOutOfBoundsException(i.toString)
@@ -79,74 +73,26 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
         Array.copy(tail, 0, newTail, 0, tail.length)
         newTail(i & 0x01f) = obj.asInstanceOf[AnyRef]
         
-        new Vector[A](length, shift, root, newTail)
+        new Vector[A](length, trie, newTail)
       } else {
-        new Vector[A](length, shift, doAssoc(shift, root, i, obj), tail)
+        new Vector[A](length, trie(i) = obj.asInstanceOf[AnyRef], tail)
       }
     } else if (i == length) {
       this + obj
     } else throw new IndexOutOfBoundsException(i.toString)
   }
   
-  private def doAssoc[A >: T](level: Int, arr: Array[AnyRef], i: Int, obj: A): Array[AnyRef] = {
-    val ret = new Array[AnyRef](arr.length)
-    Array.copy(arr, 0, ret, 0, arr.length)
-    
-    if (level == 0) {
-      ret(i & 0x01f) = obj.asInstanceOf[AnyRef]
-    } else {
-      val subidx = (i >>> level) & 0x01f
-      ret(subidx) = doAssoc(level - 5, arr(subidx).asInstanceOf[Array[AnyRef]], i, obj)
-    }
-    
-    ret
-  }
-  
-  override def ++[A >: T](other: Iterable[A]) = other.foldLeft(this:Vector[A]) { _ + _ }
+  override def ++[A >: T](other: Iterable[A]) = other.foldLeft(this: Vector[A]) { _ + _ }
   
   def +[A >: T](obj: A): Vector[A] = {
     if (tail.length < 32) {
-      val newTail = new Array[AnyRef](tail.length + 1)
-      Array.copy(tail, 0, newTail, 0, tail.length)
-      newTail(tail.length) = obj.asInstanceOf[AnyRef]
+      val tail2 = new Array[AnyRef](tail.length + 1)
+      Array.copy(tail, 0, tail2, 0, tail.length)
+      tail2(tail.length) = obj.asInstanceOf[AnyRef]
       
-      new Vector[A](length + 1, shift, root, newTail)
+      new Vector[A](length + 1, trie, tail2)
     } else {
-      var (newRoot, expansion) = pushTail(shift - 5, root, tail, null)
-      var newShift = shift
-      
-      if (expansion != null) {
-        newRoot = array(newRoot, expansion)
-        newShift += 5
-      }
-      
-      new Vector[A](length + 1, newShift, newRoot, array(obj.asInstanceOf[AnyRef]))
-    }
-  }
-  
-  private def pushTail(level: Int, arr: Array[AnyRef], tailNode: Array[AnyRef], expansion: AnyRef): (Array[AnyRef], AnyRef) = {
-    val newChild = if (level == 0) tailNode else {
-      val (newChild, subExpansion) = pushTail(level - 5, arr(arr.length - 1).asInstanceOf[Array[AnyRef]], tailNode, expansion)
-      
-      if (subExpansion == null) {
-        val ret = new Array[AnyRef](arr.length)
-        Array.copy(arr, 0, ret, 0, arr.length)
-        
-        ret(arr.length - 1) = newChild
-        
-        return (ret, null)
-      } else subExpansion
-    }
-    
-    // expansion
-    if (arr.length == 32) {
-      (arr, array(newChild)) 
-    } else {
-      val ret = new Array[AnyRef](arr.length + 1)
-      Array.copy(arr, 0, ret, 0, arr.length)
-      ret(arr.length) = newChild
-      
-      (ret, null)
+      new Vector[A](length + 1, trie + tail, array(obj.asInstanceOf[AnyRef]))
     }
   }
   
@@ -159,52 +105,13 @@ class Vector[+T] private (val length: Int, shift: Int, root: Array[AnyRef], tail
     } else if (length == 1) {
       EmptyVector
     } else if (tail.length > 1) {
-      val newTail = new Array[AnyRef](tail.length - 1)
-      Array.copy(tail, 0, newTail, 0, newTail.length)
+      val tail2 = new Array[AnyRef](tail.length - 1)
+      Array.copy(tail, 0, tail2, 0, tail2.length)
       
-      new Vector[T](length - 1, shift, root, newTail)
+      new Vector[T](length - 1, trie, tail2)
     } else {
-      var (newRoot, pTail) = popTail(shift - 5, root, null)
-      var newShift = shift
-      
-      if (newRoot == null) {
-        newRoot = EmptyArray
-      }
-      
-      if (shift > 5 && newRoot.length == 1) {
-        newRoot = newRoot(0).asInstanceOf[Array[AnyRef]]
-        newShift -= 5
-      }
-      
-      new Vector[T](length - 1, newShift, newRoot, pTail.asInstanceOf[Array[AnyRef]])
-    }
-  }
-  
-  private def popTail(shift: Int, arr: Array[AnyRef], pTail: AnyRef): (Array[AnyRef], AnyRef) = {
-    val newPTail = if (shift > 0) {
-      val (newChild, subPTail) = popTail(shift - 5, arr(arr.length - 1).asInstanceOf[Array[AnyRef]], pTail)
-      
-      if (newChild != null) {
-        val ret = new Array[AnyRef](arr.length)
-        Array.copy(arr, 0, ret, 0, arr.length)
-        
-        ret(arr.length - 1) = newChild
-        
-        return (ret, subPTail)
-      }
-      subPTail
-    } else if (shift == 0) {
-      arr(arr.length - 1)
-    } else pTail
-    
-    // contraction
-    if (arr.length == 1) {
-      (null, newPTail)
-    } else {    
-      val ret = new Array[AnyRef](arr.length - 1)
-      Array.copy(arr, 0, ret, 0, ret.length)
-      
-      (ret, newPTail)
+      val (trie2, tail2) = trie.pop
+      new Vector[T](length - 1, trie2, tail2)
     }
   }
   
@@ -322,10 +229,9 @@ object Vector {
   def unapplySeq[T](vec: Vector[T]): Option[Seq[T]] = Some(vec)
   
   @inline
-  private[collection] def array(elems: AnyRef*) = {
-    val back = new Array[AnyRef](elems.length)
-    Array.copy(elems, 0, back, 0, back.length)
-    
+  private[collection] def array(elem: AnyRef) = {
+    val back = new Array[AnyRef](1)
+    back(0) = elem
     back
   }
 }
@@ -349,3 +255,497 @@ private[collection] abstract class VectorProjection[+T] extends Vector[T] {
   private lazy val innerCopy = foldLeft(EmptyVector:Vector[T]) { _ + _ }
 }
 
+private[collection] object VectorCases {
+  private val SingletonArray1 = new Array[Array[AnyRef]](1)
+  private val SingletonArray2 = new Array[Array[Array[AnyRef]]](1)
+  private val SingletonArray3 = new Array[Array[Array[Array[AnyRef]]]](1)
+  private val SingletonArray4 = new Array[Array[Array[Array[Array[AnyRef]]]]](1)
+  
+  private def copy[A](array: Array[A], length: Int): Array[A] = {
+    val array2 = new Array[A](length)
+    Array.copy(array, 0, array2, 0, Math.min(array.length, length))
+    array2
+  }
+  
+  private def copy[A](array: Array[A]): Array[A] = copy(array, array.length)
+  
+  sealed trait Case {
+    type Self <: Case
+    
+    val shift: Int
+    
+    def apply(i: Int): Array[AnyRef]
+    def update(i: Int, obj: AnyRef): Self
+    
+    def +(node: Array[AnyRef]): Case
+    def pop: (Case, Array[AnyRef])
+  }
+  
+  case object Zero extends Case {
+    type Self = Nothing
+    
+    val shift = -1
+    
+    def apply(i: Int) = throw new IndexOutOfBoundsException(i.toString)
+    def update(i: Int, obj: AnyRef) = throw new IndexOutOfBoundsException(i.toString)
+    
+    def +(node: Array[AnyRef]) = One(node)
+    def pop = throw new IndexOutOfBoundsException("Cannot pop an empty Vector")
+  }
+  
+  case class One(trie: Array[AnyRef]) extends Case {
+    type Self = One
+    
+    val shift = 0
+    
+    def apply(i: Int) = trie
+    
+    def update(i: Int, obj: AnyRef) = {
+      val trie2 = copy(trie)
+      trie2(i & 0x01f) = obj
+      One(trie2)
+    }
+    
+    def +(tail: Array[AnyRef]) = {
+      val trie2 = new Array[Array[AnyRef]](2)
+      trie2(0) = trie
+      trie2(1) = tail
+      Two(trie2)
+    }
+    
+    def pop = (Zero, trie)
+  }
+  
+  case class Two(trie: Array[Array[AnyRef]]) extends Case {
+    type Self = Two
+    
+    val shift = 5
+    
+    def apply(i: Int) = trie((i >>> 5) & 0x01f)
+    
+    def update(i: Int, obj: AnyRef) = {
+      val trie2a = copy(trie)
+      
+      val trie2b = copy(trie2a((i >>> 5) & 0x01f))
+      trie2a((i >>> 5) & 0x01f) = trie2b
+      
+      trie2b(i & 0x01f) = obj
+      Two(trie2a)
+    }
+    
+    def +(tail: Array[AnyRef]) = {
+      if (trie.length >= 32) {
+        val trie2 = new Array[Array[Array[AnyRef]]](2)
+        trie2(0) = trie
+        
+        trie2(1) = SingletonArray1
+        trie2(1)(0) = tail
+        
+        Three(trie2)
+      } else {
+        val trie2 = copy(trie, trie.length + 1)
+        trie2(trie.length) = tail
+        Two(trie2)
+      }
+    }
+    
+    def pop = {
+      if (trie.length == 2) {
+        (One(trie(0)), trie.last)
+      } else {
+        val trie2 = copy(trie, trie.length - 1)
+        (Two(trie2), trie.last)
+      }
+    }
+  }
+  
+  case class Three(trie: Array[Array[Array[AnyRef]]]) extends Case {
+    type Self = Three
+    
+    val shift = 10
+    
+    def apply(i: Int) = {
+      val a = trie((i >>> 10) & 0x01f)
+      a((i >>> 5) & 0x01f)
+    }
+    
+    def update(i: Int, obj: AnyRef) = {
+      val trie2a = copy(trie)
+      
+      val trie2b = copy(trie2a((i >>> 10) & 0x01f))
+      trie2a((i >>> 10) & 0x01f) = trie2b
+      
+      val trie2c = copy(trie2b((i >>> 5) & 0x01f))
+      trie2b((i >>> 5) & 0x01f) = trie2c
+      
+      trie2c(i & 0x01f) = obj
+      Three(trie2a)
+    }
+    
+    def +(tail: Array[AnyRef]) = {
+      if (trie.last.length >= 32) {
+        if (trie.length >= 32) {
+          val trie2 = new Array[Array[Array[Array[AnyRef]]]](2)
+          trie2(0) = trie
+          
+          trie2(1) = SingletonArray2
+          trie2(1)(0) = SingletonArray1
+          trie2(1)(0)(0) = tail
+          
+          Four(trie2)
+        } else {
+          val trie2 = copy(trie, trie.length + 1)
+          trie2(trie.length) = SingletonArray1
+          trie2(trie.length)(0) = tail
+          Three(trie2)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length + 1)
+        trie2.last(trie.last.length) = tail
+        Three(trie2)
+      }
+    }
+    
+    def pop = {
+      if (trie.last.length == 1) {
+        if (trie.length == 2) {
+          (Two(trie(0)), trie.last.last)
+        } else {
+          val trie2 = copy(trie, trie.length - 1)
+          (Three(trie2), trie.last.last)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+        (Three(trie2), trie.last.last)
+      }
+    }
+  }
+  
+  case class Four(trie: Array[Array[Array[Array[AnyRef]]]]) extends Case {
+    type Self = Four
+    
+    val shift = 15
+    
+    def apply(i: Int) = {
+      val a = trie((i >>> 15) & 0x01f)
+      val b = a((i >>> 10) & 0x01f)
+      b((i >>> 5) & 0x01f)
+    }
+    
+    def update(i: Int, obj: AnyRef) = {
+      val trie2a = copy(trie)
+      
+      val trie2b = copy(trie2a((i >>> 15) & 0x01f))
+      trie2a((i >>> 15) & 0x01f) = trie2b
+      
+      val trie2c = copy(trie2b((i >>> 10) & 0x01f))
+      trie2b((i >>> 10) & 0x01f) = trie2c
+      
+      val trie2d = copy(trie2c((i >>> 5) & 0x01f))
+      trie2c((i >>> 5) & 0x01f) = trie2d
+      
+      trie2d(i & 0x01f) = obj
+      Four(trie2a)
+    }
+    
+    def +(tail: Array[AnyRef]) = {
+      if (trie.last.last.length >= 32) {
+        if (trie.last.length >= 32) {
+          if (trie.length >= 32) {
+            val trie2 = new Array[Array[Array[Array[Array[AnyRef]]]]](2)
+            trie2(0) = trie
+            
+            trie2(1) = SingletonArray3
+            trie2(1)(0) = SingletonArray2
+            trie2(1)(0)(0) = SingletonArray1
+            trie2(1)(0)(0)(0) = tail
+            
+            Five(trie2)
+          } else {
+            val trie2 = copy(trie, trie.length + 1)
+            trie2(trie.length) = SingletonArray2
+            trie2(trie.length)(0) = SingletonArray1
+            trie2(trie.length)(0)(0) = tail
+            Four(trie2)
+          }
+        } else {
+          val trie2 = copy(trie)
+          trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length + 1)
+          trie2.last(trie.last.length) = SingletonArray1
+          trie2.last.last(0) = tail
+          Four(trie2)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last)
+        trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length + 1)
+        trie2.last.last(trie.last.last.length) = tail
+        Four(trie2)
+      }
+    }
+    
+    def pop = {
+      if (trie.last.last.length == 1) {
+        if (trie.last.length == 1) {
+          if (trie.length == 2) {
+            (Three(trie(0)), trie.last.last.last)
+          } else {
+            val trie2 = copy(trie, trie.length - 1)
+            (Four(trie2), trie.last.last.last)
+          }
+        } else {
+          val trie2 = copy(trie)
+          trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+          (Four(trie2), trie.last.last.last)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+        trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length - 1)
+        (Four(trie2), trie.last.last.last)
+      }
+    }
+  }
+  
+  case class Five(trie: Array[Array[Array[Array[Array[AnyRef]]]]]) extends Case {
+    type Self = Five
+    
+    val shift = 20
+    
+    def apply(i: Int) = {
+      val a = trie((i >>> 20) & 0x01f)
+      val b = a((i >>> 15) & 0x01f)
+      val c = b((i >>> 10) & 0x01f)
+      c((i >>> 5) & 0x01f)
+    }
+    
+    def update(i: Int, obj: AnyRef) = {
+      val trie2a = copy(trie)
+      
+      val trie2b = copy(trie2a((i >>> 20) & 0x01f))
+      trie2a((i >>> 20) & 0x01f) = trie2b
+      
+      val trie2c = copy(trie2b((i >>> 15) & 0x01f))
+      trie2b((i >>> 15) & 0x01f) = trie2c
+      
+      val trie2d = copy(trie2c((i >>> 10) & 0x01f))
+      trie2c((i >>> 10) & 0x01f) = trie2d
+      
+      val trie2e = copy(trie2d((i >>> 5) & 0x01f))
+      trie2d((i >>> 5) & 0x01f) = trie2e
+      
+      trie2e(i & 0x01f) = obj
+      Five(trie2a)
+    }
+    
+    def +(tail: Array[AnyRef]) = {
+      if (trie.last.last.last.length >= 32) {
+        if (trie.last.last.length >= 32) {
+          if (trie.last.length >= 32) {
+            if (trie.length >= 32) {
+              val trie2 = new Array[Array[Array[Array[Array[Array[AnyRef]]]]]](2)
+              trie2(0) = trie
+              
+              trie2(1) = SingletonArray4
+              trie2(1)(0) = SingletonArray3
+              trie2(1)(0)(0) = SingletonArray2
+              trie2(1)(0)(0)(0) = SingletonArray1
+              trie2(1)(0)(0)(0)(0) = tail
+              
+              Six(trie2)
+            } else {
+              val trie2 = copy(trie, trie.length + 1)
+              trie2(trie.length) = SingletonArray3
+              trie2(trie.length)(0) = SingletonArray2
+              trie2(trie.length)(0)(0) = SingletonArray1
+              trie2(trie.length)(0)(0)(0) = tail
+              Five(trie2)
+            }
+          } else {
+            val trie2 = copy(trie)
+            trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length + 1)
+            trie2.last(trie.last.length) = SingletonArray2
+            trie2.last.last(0) = SingletonArray1
+            trie2.last.last.last(0) = tail
+            Five(trie2)
+          }
+        } else {
+          val trie2 = copy(trie)
+          trie2(trie2.length - 1) = copy(trie2.last)
+          trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length + 1)
+          trie2.last.last(trie.last.last.length) = SingletonArray1
+          trie2.last.last.last(0) = tail
+          Five(trie2)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last)
+        trie2.last(trie2.last.length - 1) = copy(trie2.last.last)
+        trie2.last.last(trie2.last.last.length - 1) = copy(trie2.last.last.last, trie2.last.last.last.length + 1)
+        trie2.last.last.last(trie.last.last.last.length) = tail
+        Five(trie2)
+      }
+    }
+    
+    def pop = {
+      if (trie.last.last.last.length == 1) {
+        if (trie.last.last.length == 1) {
+          if (trie.last.length == 1) {
+            if (trie.length == 2) {
+              (Four(trie(0)), trie.last.last.last.last)
+            } else {
+              val trie2 = copy(trie, trie.length - 1)
+              (Five(trie2), trie.last.last.last.last)
+            }
+          } else {
+            val trie2 = copy(trie)
+            trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+            (Five(trie2), trie.last.last.last.last)
+          }
+        } else {
+          val trie2 = copy(trie)
+          trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+          trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length - 1)
+          (Five(trie2), trie.last.last.last.last)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+        trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length - 1)
+        trie2.last.last(trie2.last.last.length - 1) = copy(trie2.last.last.last, trie2.last.last.last.length - 1)
+        (Five(trie2), trie.last.last.last.last)
+      }
+    }
+  }
+  
+  case class Six(trie: Array[Array[Array[Array[Array[Array[AnyRef]]]]]]) extends Case {
+    type Self = Six
+    
+    val shift = 25
+    
+    def apply(i: Int) = {
+      val a = trie((i >>> 25) & 0x01f)
+      val b = a((i >>> 20) & 0x01f)
+      val c = b((i >>> 15) & 0x01f)
+      val d = c((i >>> 10) & 0x01f)
+      d((i >>> 5) & 0x01f)
+    }
+    
+    def update(i: Int, obj: AnyRef) = {
+      val trie2a = copy(trie)
+      
+      val trie2b = copy(trie2a((i >>> 25) & 0x01f))
+      trie2a((i >>> 25) & 0x01f) = trie2b
+      
+      val trie2c = copy(trie2b((i >>> 20) & 0x01f))
+      trie2b((i >>> 20) & 0x01f) = trie2c
+      
+      val trie2d = copy(trie2c((i >>> 15) & 0x01f))
+      trie2c((i >>> 15) & 0x01f) = trie2d
+      
+      val trie2e = copy(trie2d((i >>> 10) & 0x01f))
+      trie2d((i >>> 10) & 0x01f) = trie2e
+      
+      val trie2f = copy(trie2e((i >>> 5) & 0x01f))
+      trie2e((i >>> 5) & 0x01f) = trie2f
+      
+      trie2f(i & 0x01f) = obj
+      Six(trie2a)
+    }
+    
+    def +(tail: Array[AnyRef]) = {
+      if (trie.last.last.last.last.length >= 32) {
+        if (trie.last.last.last.length >= 32) {
+          if (trie.last.last.length >= 32) {
+            if (trie.last.length >= 32) {
+              if (trie.length >= 32) {
+                throw new IndexOutOfBoundsException("Cannot grow vector beyond integer bounds")
+              } else {
+                val trie2 = copy(trie, trie.length + 1)
+                trie2(trie.length) = SingletonArray4
+                trie2(trie.length)(0) = SingletonArray3
+                trie2(trie.length)(0)(0) = SingletonArray2
+                trie2(trie.length)(0)(0)(0) = SingletonArray1
+                trie2(trie.length)(0)(0)(0)(0) = tail
+                Six(trie2)
+              }
+            } else {
+              val trie2 = copy(trie)
+              trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length + 1)
+              trie2.last(trie.last.length) = SingletonArray3
+              trie2.last.last(0) = SingletonArray2
+              trie2.last.last.last(0) = SingletonArray1
+              trie2.last.last.last.last(0) = tail
+              Six(trie2)
+            }
+          } else {
+            val trie2 = copy(trie)
+            trie2(trie2.length - 1) = copy(trie2.last)
+            trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length + 1)
+            trie2.last.last(trie.last.last.length) = SingletonArray2
+            trie2.last.last.last(0) = SingletonArray1
+            trie2.last.last.last.last(0) = tail
+            Six(trie2)
+          }
+        } else {
+          val trie2 = copy(trie)
+          trie2(trie2.length - 1) = copy(trie2.last)
+          trie2.last(trie2.last.length - 1) = copy(trie2.last.last)
+          trie2.last.last(trie2.last.last.length - 1) = copy(trie2.last.last.last, trie2.last.last.last.length + 1)
+          trie2.last.last.last(trie.last.last.last.length) = SingletonArray1
+          trie2.last.last.last.last(0) = tail
+          Six(trie2)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last)
+        trie2.last(trie2.last.length - 1) = copy(trie2.last.last)
+        trie2.last.last(trie2.last.last.length - 1) = copy(trie2.last.last.last)
+        trie2.last.last.last(trie.last.last.last.length - 1) = copy(trie2.last.last.last.last, trie2.last.last.last.last.length + 1)
+        trie2.last.last.last.last(trie.last.last.last.last.length) = tail
+        Six(trie2)
+      }
+    }
+    
+    def pop = {
+      if (trie.last.last.last.last.length == 1) {
+        if (trie.last.last.last.length == 1) {
+          if (trie.last.last.length == 1) {
+            if (trie.last.length == 1) {
+              if (trie.length == 2) {
+                (Five(trie(0)), trie.last.last.last.last.last)
+              } else {
+                val trie2 = copy(trie, trie.length - 1)
+                (Six(trie2), trie.last.last.last.last.last)
+              }
+            } else {
+              val trie2 = copy(trie)
+              trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+              (Six(trie2), trie.last.last.last.last.last)
+            }
+          } else {
+            val trie2 = copy(trie)
+            trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+            trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length - 1)
+            (Six(trie2), trie.last.last.last.last.last)
+          }
+        } else {
+          val trie2 = copy(trie)
+          trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+          trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length - 1)
+          trie2.last.last(trie2.last.last.length - 1) = copy(trie2.last.last.last, trie2.last.last.last.length - 1)
+          (Six(trie2), trie.last.last.last.last.last)
+        }
+      } else {
+        val trie2 = copy(trie)
+        trie2(trie2.length - 1) = copy(trie2.last, trie2.last.length - 1)
+        trie2.last(trie2.last.length - 1) = copy(trie2.last.last, trie2.last.last.length - 1)
+        trie2.last.last(trie2.last.last.length - 1) = copy(trie2.last.last.last, trie2.last.last.last.length - 1)
+        trie2.last.last.last(trie2.last.last.last.length - 1) = copy(trie2.last.last.last.last, trie2.last.last.last.last.length - 1)
+        (Six(trie2), trie.last.last.last.last.last)
+      }
+    }
+  }
+}
