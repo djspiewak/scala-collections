@@ -42,7 +42,11 @@ import scala.collection.mutable.Builder
 import VectorCases._
 
 /**
- * A straight port of Clojure's <code>PersistentVector</code> class.
+ * A straight port of Clojure's <code>PersistentVector</code> class (with some
+ * additional optimizations which may eventually land in Clojure's mainline).
+ * For the record, this implementation is about 30% faster than
+ * {@link scala.collection.immutable.Vector} on reads and about 5% slower for
+ * "writes".
  *
  * @author Daniel Spiewak
  * @author Rich Hickey
