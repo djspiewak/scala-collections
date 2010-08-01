@@ -1,5 +1,6 @@
 import com.codecommit.collection.Vector
 
+import scala.collection.immutable.{Vector => DefVector}
 import scala.collection.mutable.ArrayBuffer
 import scala.collection.immutable.IntMap
 
@@ -34,6 +35,18 @@ object VectorPerf {
       }
       
       vectorOp compare arrayOp
+      
+      val defVectorOp = "DefVector" -> time {
+        var vec = DefVector[Int]()
+        var i = 0
+        
+        while (i < 100000) {
+          vec :+= i
+          i += 1
+        }
+      }
+      
+      vectorOp compare defVectorOp
       
       val intMapOp = "IntMap" -> time {
         var map = IntMap[Int]()
@@ -77,6 +90,11 @@ object VectorPerf {
         arr += i
       }
       
+      var defVec = DefVector[Int]()
+      for (i <- 0 until 100000) {
+        defVec :+= i
+      }
+      
       var map = IntMap[Int]()
       for (i <- 0 until 100000) {
         map = map(i) = i
@@ -104,6 +122,16 @@ object VectorPerf {
       }
       
       vectorOp compare arrayOp
+      
+      val defVectorOp = "DefVector" -> time {
+        var i = 0
+        while (i < defVec.length) {
+          defVec(i)
+          i += 1
+        }
+      }
+      
+      vectorOp compare defVectorOp
       
       val intMapOp = "IntMap" -> time {
         var i = 0
@@ -158,6 +186,15 @@ object VectorPerf {
         arr(indexes(i)) = i
       }
       
+      var defVec = DefVector[Int]()
+      for (i <- 0 to max) {     // unplesant hack
+        defVec :+= 0
+      }
+      
+      for (i <- 0 until indexes.length) {
+        defVec = defVec.updated(indexes(i), i)
+      }
+      
       var map = IntMap[Int]()
       for (i <- 0 until indexes.length) {
         map = map(indexes(i)) = i
@@ -185,6 +222,16 @@ object VectorPerf {
       }
       
       vectorOp compare arrayOp
+      
+      val defVectorOp = "DefVector" -> time {
+        var i = 0
+        while (i < indexes.length) {
+          defVec(indexes(i))
+          i += 1
+        }
+      }
+      
+      vectorOp compare defVectorOp
       
       val intMapOp = "IntMap" -> time {
         var i = 0
@@ -224,6 +271,11 @@ object VectorPerf {
         arr += i
       }
       
+      var defVec = DefVector[Int]()
+      for (i <- 0 until 100000) {
+        defVec :+= i
+      }
+      
       var map = IntMap[Int]()
       for (i <- 0 until 100000) {
         map = map(i) = i
@@ -238,6 +290,12 @@ object VectorPerf {
       }
       
       vectorOp compare arrayOp
+      
+      val defVectorOp = "DefVector" -> time {
+        defVec.reverse
+      }
+      
+      vectorOp compare defVectorOp
       
       div('=')
       println()
@@ -255,6 +313,11 @@ object VectorPerf {
       var arr = new ArrayBuffer[Int]
       for (i <- 0 until 100000) {
         arr += i
+      }
+      
+      var defVec = DefVector[Int]()
+      for (i <- 0 until 100000) {
+        defVec :+= i
       }
       
       var map = IntMap[Int]()
@@ -276,6 +339,12 @@ object VectorPerf {
       }
       
       vectorOp compare arrayOp
+      
+      val defVectorOp = "DefVector" -> time {
+        defVec.length
+      }
+      
+      vectorOp compare defVectorOp
       
       val intMapOp = "IntMap" -> time {
         map.size
