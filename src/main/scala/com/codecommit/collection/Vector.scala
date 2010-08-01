@@ -115,7 +115,7 @@ class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef])
     if (length == 0) {
       throw new IllegalStateException("Can't pop empty vector")
     } else if (length == 1) {
-      EmptyVector
+      Vector.empty
     } else if (tail.length > 1) {
       val tail2 = new Array[AnyRef](tail.length - 1)
       Array.copy(tail, 0, tail2, 0, tail2.length)
@@ -154,8 +154,10 @@ object Vector extends SeqFactory[Vector] {
   
   private[collection] val EmptyArray = new Array[AnyRef](0)
   
+  private[this] val emptyVector = new Vector[Nothing]
+  
   @inline
-  override def empty[A]: Vector[A] = EmptyVector
+  override def empty[A]: Vector[A] = emptyVector
   
   @inline
   private[collection] def array(elem: AnyRef) = {
@@ -164,8 +166,6 @@ object Vector extends SeqFactory[Vector] {
     back
   }
 }
-
-object EmptyVector extends Vector[Nothing]
 
 private[collection] object VectorCases {
   @inline

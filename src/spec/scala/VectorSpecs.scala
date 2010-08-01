@@ -1,7 +1,7 @@
 import org.specs._
 import org.scalacheck._
 
-import com.codecommit.collection.{EmptyVector, Vector}
+import com.codecommit.collection.Vector
 
 object VectorSpecs extends Specification with ScalaCheck {
   import Prop._
@@ -93,7 +93,7 @@ object VectorSpecs extends Specification with ScalaCheck {
     
     "fail on pop empty vector" in {
       val caughtExcept = try {
-        EmptyVector.pop
+        Vector.empty.pop
         false
       } catch {
         case _: IllegalStateException => true
