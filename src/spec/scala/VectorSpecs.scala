@@ -34,9 +34,10 @@ object VectorSpecs extends Specification with ScalaCheck {
     
     "replace single element" in {
       val prop = forAll { (vec: Vector[Int], i: Int) =>
-        ((0 to vec.length) contains i) ==> {
-          val newVector = (vec(i) = "test")(i) = "newTest"
-          newVector(i) == "newTest"
+        (!vec.isEmpty && i > Math.MIN_INT) ==> {
+          val idx = Math.abs(i) % vec.length
+          val newVector = (vec(idx) = "test")(idx) = "newTest"
+          newVector(idx) == "newTest"
         }
       }
       
@@ -285,87 +286,6 @@ object VectorSpecs extends Specification with ScalaCheck {
           back &&= mapped(i) == f(rev(i))
         }
         back
-      }
-      
-      prop must pass
-    }
-    
-    "implement subseq" in {
-      val prop = forAll { (v: Vector[Int], from: Int, end: Int) =>
-        try {
-          val sub = v.subseq(from, end)
-          
-          var back = sub.length == end - from
-          
-          for (i <- 0 until sub.length) {
-            back &&= sub(i) == v(i + from)
-          }
-          
-          back
-        } catch {
-          case _:IndexOutOfBoundsException => from < 0 || end >= v.length
-          case _:IllegalArgumentException => end <= from
-        }
-      }
-      
-      prop must pass
-    }
-    
-    "append to subseq" in {
-      val prop = forAll { (v: Vector[Int], from: Int, end: Int, n: Int) =>
-        try {
-          val sub = v.subseq(from, end)
-          val add = sub + n
-          
-          var back = add.length == sub.length + 1
-          for (i <- 0 until sub.length) {
-            back &&= add(i) == sub(i)
-          }
-          back && add(sub.length) == n
-        } catch {
-          case _:IndexOutOfBoundsException => from < 0 || end >= v.length
-          case _:IllegalArgumentException => end <= from
-        }
-      }
-      
-      prop must pass
-    }
-    
-    "update subseq" in {
-      val prop = forAll { (v: Vector[Int], from: Int, end: Int, mi: Int) =>
-        try {
-          val sub = v.subseq(from, end)
-          val add = sub(mi) = 42
-          
-          var back = add.length == sub.length + (if (mi == sub.length) 1 else 0)
-          for (i <- 0 until sub.length; if i != mi) {
-            back &&= add(i) == sub(i)
-          }
-          back && add(mi) == 42
-        } catch {
-          case _:IndexOutOfBoundsException => from < 0 || end >= v.length || !(0 to (end - from) contains mi)
-          case _:IllegalArgumentException => end <= from
-        }
-      }
-      
-      prop must pass
-    }
-    
-    "map on subseq" in {
-      val prop = forAll { (v: Vector[Int], from: Int, end: Int, f: (Int)=>Int) =>
-        try {
-          val sub = v.subseq(from, end)
-          val mapped = sub map f
-          
-          var back = mapped.length == sub.length
-          for (i <- 0 until sub.length) {
-            back &&= mapped(i) == f(sub(i))
-          }
-          back
-        } catch {
-          case _:IndexOutOfBoundsException => from < 0 || end >= v.length
-          case _:IllegalArgumentException => end <= from
-        }
       }
       
       prop must pass

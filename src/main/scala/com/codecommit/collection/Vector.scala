@@ -34,7 +34,11 @@
 
 package com.codecommit.collection
 
-import Vector._
+import scala.collection.IndexedSeqLike
+import scala.collection.generic._
+import scala.collection.immutable.IndexedSeq
+import scala.collection.mutable.Builder
+
 import VectorCases._
 
 /**
@@ -43,8 +47,14 @@ import VectorCases._
  * @author Daniel Spiewak
  * @author Rich Hickey
  */
-class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef]) extends RandomAccessSeq[T] { outer =>
+class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef])
+    extends IndexedSeq[T]
+    with GenericTraversableTemplate[T, Vector]
+    with IndexedSeqLike[T, Vector[T]] { outer =>
+      
   private val tailOff = length - tail.length
+  
+  override def companion = Vector
   
   /*
    * The design of this data structure inherantly requires heterogenous arrays.
@@ -53,7 +63,7 @@ class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef]) exte
    * (somewhat dynamically-typed) implementation in place.
    */
   
-  private[collection] def this() = this(0, Zero, EmptyArray)
+  private[collection] def this() = this(0, Zero, Vector.EmptyArray)
   
   def apply(i: Int): T = {
     if (i >= 0 && i < length) {
@@ -82,8 +92,6 @@ class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef]) exte
     } else throw new IndexOutOfBoundsException(i.toString)
   }
   
-  override def ++[A >: T](other: Iterable[A]) = other.foldLeft(this: Vector[A]) { _ + _ }
-  
   def +[A >: T](obj: A): Vector[A] = {
     if (tail.length < 32) {
       val tail2 = new Array[AnyRef](tail.length + 1)
@@ -92,7 +100,7 @@ class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef]) exte
       
       new Vector[A](length + 1, trie, tail2)
     } else {
-      new Vector[A](length + 1, trie + tail, array(obj.asInstanceOf[AnyRef]))
+      new Vector[A](length + 1, trie + tail, Vector.array(obj.asInstanceOf[AnyRef]))
     }
   }
   
@@ -114,119 +122,36 @@ class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef]) exte
       new Vector[T](length - 1, trie2, tail2)
     }
   }
-  
-  override def filter(p: (T)=>Boolean) = {
-    var back = new Vector[T]
-    var i = 0
-    
-    while (i < length) {
-      val e = apply(i)
-      if (p(e)) back += e
-      
-      i += 1
-    }
-    
-    back
-  }
-  
-  override def flatMap[A](f: (T)=>Iterable[A]) = {
-    var back = new Vector[A]
-    var i = 0
-    
-    while (i < length) {
-      f(apply(i)) foreach { back += _ }
-      i += 1
-    }
-    
-    back
-  }
-  
-  override def map[A](f: (T)=>A) = {
-    var back = new Vector[A]
-    var i = 0
-    
-    while (i < length) {
-      back += f(apply(i))
-      i += 1
-    }
-    
-    back
-  }
-  
-  override def reverse: Vector[T] = new VectorProjection[T] {
-    override val length = outer.length
-    
-    override def apply(i: Int) = outer.apply(length - i - 1)
-  }
-  
-  override def subseq(from: Int, end: Int) = subVector(from, end)
-  
-  def subVector(from: Int, end: Int): Vector[T] = {
-    if (from < 0) {
-      throw new IndexOutOfBoundsException(from.toString)
-    } else if (end >= length) {
-      throw new IndexOutOfBoundsException(end.toString)
-    } else if (end <= from) {
-      throw new IllegalArgumentException("Invalid range: " + from + ".." + end)
-    } else {
-      new VectorProjection[T] {
-        override val length = end - from
-        
-        override def apply(i: Int) = outer.apply(i + from)
-      }
-    }
-  }
-  
-  def zip[A](that: Vector[A]) = {
-    var back = new Vector[(T, A)]
-    var i = 0
-    
-    val limit = Math.min(length, that.length)
-    while (i < limit) {
-      back += (apply(i), that(i))
-      i += 1
-    }
-    
-    back
-  }
-  
-  def zipWithIndex = {
-    var back = new Vector[(T, Int)]
-    var i = 0
-    
-    while (i < length) {
-      back += (apply(i), i)
-      i += 1
-    }
-    
-    back
-  }
-  
-  override def equals(other: Any) = other match {
-    case vec:Vector[T] => {
-      var back = length == vec.length
-      var i = 0
-      
-      while (i < length) {
-        back &&= apply(i) == vec.apply(i)
-        i += 1
-      }
-      
-      back
-    }
-    
-    case _ => false
-  }
-  
-  override def hashCode = foldLeft(0) { _ ^ _.hashCode }
 }
 
-object Vector {
+final class VectorBuilder[A] extends Builder[A, Vector[A]] {      // TODO optimize
+  private var tmp = Vector.empty[A]
+  
+  def +=(elem: A) = {
+    tmp += elem
+    this
+  }
+  
+  def result = tmp
+  
+  def clear() {
+    tmp = Vector.empty[A]
+  }
+}
+
+object Vector extends SeqFactory[Vector] {
+
+  @inline
+  implicit def canBuildFrom[A]: CanBuildFrom[Coll, A, Vector[A]] = new GenericCanBuildFrom[A] {
+    override def apply = newBuilder[A]
+  }
+  
+  def newBuilder[A] = new VectorBuilder[A]
+  
   private[collection] val EmptyArray = new Array[AnyRef](0)
   
-  def apply[T](elems: T*) = elems.foldLeft(EmptyVector:Vector[T]) { _ + _ }
-  
-  def unapplySeq[T](vec: Vector[T]): Option[Seq[T]] = Some(vec)
+  @inline
+  override def empty[A]: Vector[A] = EmptyVector
   
   @inline
   private[collection] def array(elem: AnyRef) = {
