@@ -122,6 +122,47 @@ object VectorSpecs extends Specification with ScalaCheck {
       }
     }
     
+    "maintain both old and new versions after conj" in {
+      val prop = forAll { vec: Vector[Int] =>
+        val vec2 = vec + 42
+        for (i <- 0 until vec.length) {
+          vec2(i) aka ("Index " + i + " in derivative") mustEqual vec(i) aka ("Index " + i + " in origin")
+        }
+        vec2.last mustEqual 42
+      }
+      
+      prop must pass(set(maxSize -> 3000, minTestsOk -> 1000))
+    }
+    
+    "maintain both old and new versions after update" in {
+      val prop = forAll { (vec: Vector[Int], i: Int) =>
+        (!vec.isEmpty && i > Math.MIN_INT) ==> {
+          val idx = Math.abs(i) % vec.length
+          val vec2 = vec(idx) = 42
+          for (i <- 0 until vec.length if i != idx) {
+            vec2(i) aka ("Index " + i + " in derivative") mustEqual vec(i) aka ("Index " + i + " in origin")
+          }
+          vec2(idx) mustEqual 42
+        }
+      }
+      
+      prop must pass(set(maxSize -> 3000, minTestsOk -> 1000))
+    }
+    
+    "maintain both old and new versions after pop" in {
+      val prop = forAll { vec: Vector[Int] =>
+        !vec.isEmpty ==> {
+          val vec2 = vec.pop
+          for (i <- 0 until vec.length - 1) {
+            vec2(i) aka ("Index " + i + " in derivative") mustEqual vec(i) aka ("Index " + i + " in origin")
+          }
+          vec2.length mustEqual vec.length - 1
+        }
+      }
+      
+      prop must pass(set(maxSize -> 3000, minTestsOk -> 1000))
+    }
+    
     "implement filter" in {
       val prop = forAll { (vec: Vector[Int], f: (Int)=>Boolean) =>
         val filtered = vec filter f
