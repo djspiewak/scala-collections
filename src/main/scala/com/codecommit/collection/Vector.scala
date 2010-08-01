@@ -163,23 +163,6 @@ object Vector extends SeqFactory[Vector] {
 
 object EmptyVector extends Vector[Nothing]
 
-private[collection] abstract class VectorProjection[+T] extends Vector[T] {
-  override val length: Int
-  override def apply(i: Int): T
-  
-  override def +[A >: T](e: A) = innerCopy + e
-  
-  override def update[A >: T](i: Int, e: A) = {
-    if (i < 0) {
-      throw new IndexOutOfBoundsException(i.toString)
-    } else if (i > length) {
-      throw new IndexOutOfBoundsException(i.toString)
-    } else innerCopy(i) = e
-  }
-  
-  private lazy val innerCopy = foldLeft(EmptyVector:Vector[T]) { _ + _ }
-}
-
 private[collection] object VectorCases {
   @inline
   private[this] def copy1(array1: Array[AnyRef], array2: Array[AnyRef]) = {
