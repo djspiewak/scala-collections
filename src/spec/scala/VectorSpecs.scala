@@ -1,7 +1,7 @@
 import org.specs._
 import org.scalacheck._
 
-import com.codecommit.collection.Vector
+import com.codecommit.collection.{Vector, VectorBuilder}
 
 object VectorSpecs extends Specification with ScalaCheck {
   import Prop._
@@ -381,6 +381,27 @@ object VectorSpecs extends Specification with ScalaCheck {
       vec2 must beLike {
         case Vector(a, b, c) => (a, b, c) == ("daniel", "chris", "joseph")
       }
+    }
+  }
+  
+  "vector builder" should {
+    "build a vector of arbitrary length" in {
+      val prop = forAll { i: Int =>
+        i > Math.MIN_INT ==> {
+          val length = Math.abs(i) % (32 << 16)
+          val builder = new VectorBuilder[Int]
+          0 until length foreach (builder +=)
+          val vector = builder.result
+          
+          vector.length mustEqual length
+          for (i <- 0 until vector.length) {
+            vector(i) aka ("vector element at index " + i) mustEqual i
+          }
+          true
+        }
+      }
+      
+      prop must pass(set(maxSize -> 25, minTestsOk -> 12))
     }
   }
 }

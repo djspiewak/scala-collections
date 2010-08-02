@@ -37,7 +37,7 @@ package com.codecommit.collection
 import scala.collection.IndexedSeqLike
 import scala.collection.generic._
 import scala.collection.immutable.IndexedSeq
-import scala.collection.mutable.Builder
+import scala.collection.mutable.{ArrayBuffer, Builder}
 
 import VectorCases._
 
@@ -51,7 +51,7 @@ import VectorCases._
  * @author Daniel Spiewak
  * @author Rich Hickey
  */
-class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef])
+class Vector[+T] private[collection] (val length: Int, trie: Case, tail: Array[AnyRef])
     extends IndexedSeq[T]
     with GenericTraversableTemplate[T, Vector]
     with IndexedSeqLike[T, Vector[T]] { outer =>
@@ -129,17 +129,125 @@ class Vector[+T] private (val length: Int, trie: Case, tail: Array[AnyRef])
 }
 
 final class VectorBuilder[A] extends Builder[A, Vector[A]] {      // TODO optimize
-  private var tmp = Vector.empty[A]
+  private val buffer = new ArrayBuffer[A]
+  
+  val ZeroThresh = 0
+  val OneThresh = 32
+  val TwoThresh = 32 << 5
+  val ThreeThresh = 32 << 10
+  val FourThresh = 32 << 15
+  val FiveThresh = 32 << 20
+  val SixThresh = 32 << 25
   
   def +=(elem: A) = {
-    tmp += elem
+    buffer += elem
     this
   }
   
-  def result = tmp
+  def result = {
+    import VectorCases._
+    
+    val tailLength = if (buffer.length % 32 == 0) 32 else buffer.length % 32
+    val trieBuffer = buffer.view(0, buffer.length - tailLength)
+    val tailBuffer = buffer.view(buffer.length - tailLength, buffer.length)
+    
+    val trie = if (trieBuffer.length <= ZeroThresh)
+      Zero
+    else if (trieBuffer.length <= OneThresh)
+      One(fillArray1(trieBuffer))
+    else if (trieBuffer.length <= TwoThresh)
+      Two(fillArray2(trieBuffer))
+    else if (trieBuffer.length <= ThreeThresh)
+      Three(fillArray3(trieBuffer))
+    else if (trieBuffer.length <= FourThresh)
+      Four(fillArray4(trieBuffer))
+    else if (trieBuffer.length <= FiveThresh)
+      Five(fillArray5(trieBuffer))
+    else if (trieBuffer.length <= SixThresh)
+      Six(fillArray6(trieBuffer))
+    else
+      throw new IllegalStateException("Cannot build vector with length which exceeds MAX_INT")
+    
+    new Vector[A](buffer.length, trie, fillArray1(tailBuffer))
+  }
+  
+  private def fillArray6(seq: Seq[_]) = {
+    val CellSize = FiveThresh
+    val length = if (seq.length % CellSize == 0) seq.length / CellSize else (seq.length / CellSize) + 1
+    val back = new Array[Array[Array[Array[Array[Array[AnyRef]]]]]](length)
+    
+    for (i <- 0 until back.length) {
+      val buffer = seq.view(i * CellSize, Math.min((i + 1) * CellSize, seq.length))
+      back(i) = fillArray5(buffer)
+    }
+    
+    back
+  }
+  
+  private def fillArray5(seq: Seq[_]) = {
+    val CellSize = FourThresh
+    val length = if (seq.length % CellSize == 0) seq.length / CellSize else (seq.length / CellSize) + 1
+    val back = new Array[Array[Array[Array[Array[AnyRef]]]]](length)
+    
+    for (i <- 0 until back.length) {
+      val buffer = seq.view(i * CellSize, Math.min((i + 1) * CellSize, seq.length))
+      back(i) = fillArray4(buffer)
+    }
+    
+    back
+  }
+  
+  private def fillArray4(seq: Seq[_]) = {
+    val CellSize = ThreeThresh
+    val length = if (seq.length % CellSize == 0) seq.length / CellSize else (seq.length / CellSize) + 1
+    val back = new Array[Array[Array[Array[AnyRef]]]](length)
+    
+    for (i <- 0 until back.length) {
+      val buffer = seq.view(i * CellSize, Math.min((i + 1) * CellSize, seq.length))
+      back(i) = fillArray3(buffer)
+    }
+    
+    back
+  }
+  
+  private def fillArray3(seq: Seq[_]) = {
+    val CellSize = TwoThresh
+    val length = if (seq.length % CellSize == 0) seq.length / CellSize else (seq.length / CellSize) + 1
+    val back = new Array[Array[Array[AnyRef]]](length)
+    
+    for (i <- 0 until back.length) {
+      val buffer = seq.view(i * CellSize, Math.min((i + 1) * CellSize, seq.length))
+      back(i) = fillArray2(buffer)
+    }
+    
+    back
+  }
+  
+  private def fillArray2(seq: Seq[_]) = {
+    val CellSize = OneThresh
+    val length = if (seq.length % CellSize == 0) seq.length / CellSize else (seq.length / CellSize) + 1
+    val back = new Array[Array[AnyRef]](length)
+    
+    for (i <- 0 until back.length) {
+      val buffer = seq.view(i * CellSize, Math.min((i + 1) * CellSize, seq.length))
+      back(i) = fillArray1(buffer)
+    }
+    
+    back
+  }
+  
+  private def fillArray1(seq: Seq[_]) = {
+    val back = new Array[AnyRef](seq.length)
+    
+    for ((e, i) <- seq.zipWithIndex) {
+      back(i) = e.asInstanceOf[AnyRef]
+    }
+    
+    back
+  }
   
   def clear() {
-    tmp = Vector.empty[A]
+    buffer.clear()
   }
 }
 
